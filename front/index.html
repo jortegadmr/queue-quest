@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QueueQuest</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app">
+        <header>
+            <div class="logo-app">
+                <img src="logo.png" alt="QueueQuest Logo">
+            </div>
+            <div class="header-text">
+                <div class="header-title">QueueQuest</div>
+                <div class="header-subtitle">Convierte la espera en experiencia</div>
+            </div>
+        </header>
+
+        <main>
+            <div class="card">
+
+                <!-- VISTA 1: tras escanear el QR -->
+                <div class="view active" id="view-inicio">
+                    <div>
+                        <div class="label-small">Estás en</div>
+                        <div style="font-size: 18px; font-weight: 600; margin-top: 4px;">
+                            Cafetería Aurora
+                        </div>
+                        <p class="hint">
+                            Estás en Cafetería Aurora, un local con buen café y opciones caseras. Pide tu número y sigue
+                            tu turno desde aquí.
+                        </p>
+                    </div>
+
+                    <div class="btn-row">
+                        <button class="btn btn-primary" id="btnPedirNumero">
+                            <span class="icon">🎟️</span>
+                            <span>Pedir número</span>
+                        </button>
+
+                        <button class="btn btn-secondary" id="btnLoginComercio">
+                            <span class="icon">🔐</span>
+                            <span>Login comercio</span>
+                        </button>
+                    </div>
+
+                    <p class="hint">
+                        Sin registro. Sin descargas. Todo desde tu móvil.
+                    </p>
+                </div>
+
+                <!-- VISTA 2: turno asignado -->
+                <div class="view" id="view-turno">
+                    <div class="queue-status">
+                        <div class="pill">
+                            <span class="pill-dot"></span>
+                            Turno activo
+                        </div>
+
+                        <div>
+                            <div class="label-small">Tu número</div>
+                            <div class="main-number" id="numeroTurno">042</div>
+                        </div>
+
+                        <div class="queue-metrics">
+                            <div class="metric">
+                                <div class="metric-label">Personas delante</div>
+                                <div class="metric-value" id="personasDelante">3</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Tiempo estimado</div>
+                                <div class="metric-value" id="tiempoEstimado">12 min</div>
+                            </div>
+                        </div>
+
+                        <div class="alert">
+                            <span class="icon">🔔</span>
+                            <span>
+                                Permanece atento. Cuando se acerque tu turno, te avisaremos desde la pantalla del local.
+                            </span>
+                        </div>
+
+                        <div class="subcard">
+                            <div class="subcard-title">Mientras esperas…</div>
+                            <div class="subcard-text">
+                                Descubre la carta, completa pequeñas misiones o aprovecha las ofertas del día sin perder
+                                tu turno.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bottom-actions">
+                        <button class="btn-ghost" id="btnQueueQuest">
+                            <div class="btn-ghost-title">
+                                <span>🎮 QueueQuest</span>
+                            </div>
+                            <div class="btn-ghost-sub">
+                                Misiones rápidas para hacer la espera más llevadera.
+                            </div>
+                        </button>
+
+                        <button class="btn-ghost" id="btnOfertas">
+                            <div class="btn-ghost-title">
+                                <span>💸 Ofertas del día</span>
+                            </div>
+                            <div class="btn-ghost-sub">
+                                Descuentos y sugerencias del local solo por estar en la cola.
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <footer>
+            Prototipo web – QueueQuest · Vista móvil
+        </footer>
+    </div>
+
+    <script>
+        const viewInicio = document.getElementById('view-inicio');
+        const viewTurno = document.getElementById('view-turno');
+        const btnPedirNumero = document.getElementById('btnPedirNumero');
+
+        btnPedirNumero.addEventListener('click', () => {
+            // Aquí en el futuro se pedirá el turno al backend.
+            // Para el mockup solo cambiamos de vista.
+            viewInicio.classList.remove('active');
+            viewTurno.classList.add('active');
+        });
+
+        const btnLoginComercio = document.getElementById('btnLoginComercio');
+        btnLoginComercio.addEventListener('click', () => {
+            // Para el mock, navegamos directamente al panel del comercio
+            window.location.href = 'comercio.html';
+        });
+
+
+        // Los botones de QueueQuest y Ofertas pueden mostrar un simple aviso
+        document.getElementById('btnQueueQuest').addEventListener('click', () => {
+            alert('Zona gamificada (QueueQuest) – se implementará en fases posteriores.');
+        });
+
+        document.getElementById('btnOfertas').addEventListener('click', () => {
+            alert('Ofertas del día – contenido configurable por el comercio.');
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QueueQuest · Panel del comercio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="logo-app">
+        <img src="logo.png" alt="QueueQuest Logo">
+      </div>
+      <div class="header-text">
+        <div class="header-title">Cafetería Aurora</div>
+        <div class="header-subtitle">Panel de cola · QueueQuest</div>
+      </div>
+    </header>
+
+    <main>
+      <div class="card card-commerce">
+
+        <div class="commerce-header">
+          <div>
+            <div class="label-small">Estado de la cola</div>
+            <div class="commerce-subtitle">
+              Gestiona los turnos del local en tiempo real.
+            </div>
+          </div>
+
+          <div class="pill pill-commerce">
+            <span class="pill-dot"></span>
+            Cola abierta
+          </div>
+        </div>
+
+        <!-- Bloque turno actual -->
+        <section class="commerce-current">
+          <div class="current-block">
+            <div class="label-small">Turno actual</div>
+            <div class="current-number">041</div>
+            <div class="current-secondary">
+              Último turno llamado hace 2 min
+            </div>
+          </div>
+
+          <div class="current-controls">
+            <button class="btn btn-primary btn-full">
+              <span class="icon">📣</span>
+              <span>Llamar siguiente (042)</span>
+            </button>
+            <button class="btn btn-secondary btn-full">
+              <span class="icon">⏸️</span>
+              <span>Pausar cola</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- Métricas rápidas -->
+        <section class="commerce-metrics">
+          <div class="metric metric-commerce">
+            <div class="metric-label">Personas en cola</div>
+            <div class="metric-value">7</div>
+          </div>
+          <div class="metric metric-commerce">
+            <div class="metric-label">Tiempo medio</div>
+            <div class="metric-value">4 min</div>
+          </div>
+          <div class="metric metric-commerce">
+            <div class="metric-label">Atendidos hoy</div>
+            <div class="metric-value">38</div>
+          </div>
+        </section>
+
+        <!-- Lista de cola -->
+        <section class="commerce-queue-list">
+          <div class="queue-list-header">
+            <div class="queue-list-title">
+              Cola actual
+            </div>
+            <div class="queue-list-hint">
+              Próximos 5 turnos en espera.
+            </div>
+          </div>
+
+          <div class="queue-table">
+            <div class="queue-row queue-row-head">
+              <span>#</span>
+              <span>Estado</span>
+              <span>Espera</span>
+            </div>
+
+            <div class="queue-row">
+              <span>042</span>
+              <span class="chip chip-next">Siguiente</span>
+              <span>~ 3 min</span>
+            </div>
+            <div class="queue-row">
+              <span>043</span>
+              <span class="chip">En cola</span>
+              <span>~ 7 min</span>
+            </div>
+            <div class="queue-row">
+              <span>044</span>
+              <span class="chip">En cola</span>
+              <span>~ 11 min</span>
+            </div>
+            <div class="queue-row">
+              <span>045</span>
+              <span class="chip">En cola</span>
+              <span>~ 15 min</span>
+            </div>
+            <div class="queue-row">
+              <span>046</span>
+              <span class="chip chip-new">Recién llegado</span>
+              <span>~ 19 min</span>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <footer>
+      Prototipo web – Panel del comercio · Vista móvil
+    </footer>
+  </div>
+</body>
+
+</html>
