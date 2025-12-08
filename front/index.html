@@ -122,34 +122,204 @@
         </footer>
     </div>
 
-    <script>
-        const viewInicio = document.getElementById('view-inicio');
-        const viewTurno = document.getElementById('view-turno');
-        const btnPedirNumero = document.getElementById('btnPedirNumero');
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            updateDoc,
+            collection,
+            addDoc,
+            getDocs,
+            query,
+            where
+        } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-        btnPedirNumero.addEventListener('click', () => {
-            // Aquí en el futuro se pedirá el turno al backend.
-            // Para el mockup solo cambiamos de vista.
-            viewInicio.classList.remove('active');
-            viewTurno.classList.add('active');
+        const firebaseConfig = {
+            apiKey: "AIzaSyDbVEF05RYFOQIEFBGqwFun6gG5-NOkoJs",
+            authDomain: "queuequest-a1303.firebaseapp.com",
+            projectId: "queuequest-a1303",
+            storageBucket: "queuequest-a1303.firebasestorage.app",
+            messagingSenderId: "917209444646",
+            appId: "1:917209444646:web:7672c88b270395fa1211e7",
+            measurementId: "G-15TZX71SGN"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+        console.log("🔥 Firebase inicializado correctamente");
+
+        // --- Constantes ---
+        const COLA_ID = "cafeteria-aurora";
+        const TIEMPO_MEDIO_MINUTOS = 4; // estimación simple de 4 min por persona
+
+        // --- Referencias DOM ---
+        const viewInicio = document.getElementById("view-inicio");
+        const viewTurno = document.getElementById("view-turno");
+        const btnPedirNumero = document.getElementById("btnPedirNumero");
+        const btnLoginComercio = document.getElementById("btnLoginComercio");
+        const numeroTurnoEl = document.getElementById("numeroTurno");
+        const personasDelanteEl = document.getElementById("personasDelante");
+        const tiempoEstimadoEl = document.getElementById("tiempoEstimado");
+        const btnQueueQuest = document.getElementById("btnQueueQuest");
+        const btnOfertas = document.getElementById("btnOfertas");
+
+        // --- UI ---
+        function mostrarVistaTurno({ numero, personasDelante, eta }) {
+            numeroTurnoEl.textContent = String(numero).padStart(3, "0");
+            personasDelanteEl.textContent = personasDelante;
+            tiempoEstimadoEl.textContent = `${eta} min`;
+
+            viewInicio.classList.remove("active");
+            viewTurno.classList.add("active");
+        }
+
+        // --- Firestore: Pedir número ---
+        async function pedirTurno() {
+            try {
+                const colaRef = doc(db, "colas", COLA_ID);
+                const colaSnap = await getDoc(colaRef);
+
+                if (!colaSnap.exists()) {
+                    alert("La cola no existe en la base de datos.");
+                    return;
+                }
+
+                const datosCola = colaSnap.data();
+                const numeroActual = datosCola.numeroActual ?? 0;
+                const nuevoNumero = numeroActual + 1;
+
+                // 1) Crear turno
+                const turnosRef = collection(colaRef, "turnos");
+                const nuevoTurnoDoc = await addDoc(turnosRef, {
+                    numero: nuevoNumero,
+                    estado: "en_cola",
+                    creadoEn: new Date(),
+                    eta: 0,         // lo recalculamos debajo
+                    posicion: 0     // idem
+                });
+
+                // 2) Calcular personas delante:
+                //    todos los turnos "en_cola" con numero < nuevoNumero
+                const q = query(turnosRef, where("estado", "==", "en_cola"));
+                const snapshot = await getDocs(q);
+
+                let personasDelante = 0;
+                snapshot.forEach((docSnap) => {
+                    const t = docSnap.data();
+                    if (t.numero < nuevoNumero) {
+                        personasDelante++;
+                    }
+                });
+
+                // 3) Calcular ETA simple
+                const eta = personasDelante * TIEMPO_MEDIO_MINUTOS;
+
+                // 4) Actualizar el turno con posición y eta
+                await updateDoc(nuevoTurnoDoc, {
+                    posicion: personasDelante,
+                    eta: eta
+                });
+
+                // 5) Actualizar númeroActual de la cola
+                await updateDoc(colaRef, {
+                    numeroActual: nuevoNumero
+                });
+
+                // 6) Guardar en localStorage
+                localStorage.setItem("colaId", COLA_ID);
+                localStorage.setItem("ticketId", nuevoTurnoDoc.id);
+
+                // 7) Mostrar en pantalla
+                mostrarVistaTurno({
+                    numero: nuevoNumero,
+                    personasDelante,
+                    eta
+                });
+
+            } catch (err) {
+                console.error("Error al pedir turno:", err);
+                alert("No se ha podido pedir turno. Inténtalo de nuevo más tarde.");
+            }
+        }
+
+        // --- Firestore: Cargar turno existente (al recargar página) ---
+        async function cargarTurnoExistente() {
+            const colaId = localStorage.getItem("colaId");
+            const ticketId = localStorage.getItem("ticketId");
+
+            if (!colaId || !ticketId) {
+                // No hay turno guardado, dejamos la vista de inicio
+                return;
+            }
+
+            try {
+                const colaRef = doc(db, "colas", colaId);
+                const ticketRef = doc(colaRef, "turnos", ticketId);
+
+                const [colaSnap, ticketSnap] = await Promise.all([
+                    getDoc(colaRef),
+                    getDoc(ticketRef)
+                ]);
+
+                if (!colaSnap.exists() || !ticketSnap.exists()) {
+                    // Algo raro: limpiamos y dejamos vista inicio
+                    localStorage.removeItem("colaId");
+                    localStorage.removeItem("ticketId");
+                    return;
+                }
+
+                const turno = ticketSnap.data();
+
+                // Recalcular personas delante con los turnos actuales
+                const turnosRef = collection(colaRef, "turnos");
+                const q = query(turnosRef, where("estado", "==", "en_cola"));
+                const snapshot = await getDocs(q);
+
+                let personasDelante = 0;
+                snapshot.forEach((docSnap) => {
+                    const t = docSnap.data();
+                    if (t.numero < turno.numero) {
+                        personasDelante++;
+                    }
+                });
+
+                const eta = personasDelante * TIEMPO_MEDIO_MINUTOS;
+
+                mostrarVistaTurno({
+                    numero: turno.numero,
+                    personasDelante,
+                    eta
+                });
+
+            } catch (err) {
+                console.error("Error al cargar turno existente:", err);
+                // En caso de error, no bloqueamos la app
+            }
+        }
+
+
+        // --- Eventos ---
+        btnPedirNumero.addEventListener("click", pedirTurno);
+
+        btnLoginComercio.addEventListener("click", () => {
+            window.location.href = "comercio.html";
         });
 
-        const btnLoginComercio = document.getElementById('btnLoginComercio');
-        btnLoginComercio.addEventListener('click', () => {
-            // Para el mock, navegamos directamente al panel del comercio
-            window.location.href = 'comercio.html';
+        btnQueueQuest.addEventListener("click", () => {
+            alert("Zona gamificada (QueueQuest) – se implementará en fases posteriores.");
         });
 
-
-        // Los botones de QueueQuest y Ofertas pueden mostrar un simple aviso
-        document.getElementById('btnQueueQuest').addEventListener('click', () => {
-            alert('Zona gamificada (QueueQuest) – se implementará en fases posteriores.');
+        btnOfertas.addEventListener("click", () => {
+            alert("Ofertas del día – contenido configurable por el comercio.");
         });
-
-        document.getElementById('btnOfertas').addEventListener('click', () => {
-            alert('Ofertas del día – contenido configurable por el comercio.');
-        });
+        // Al cargar la página, intentamos recuperar un turno guardado
+        cargarTurnoExistente();
     </script>
+
 </body>
 
 </html>
