@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QueueQuest · Login comercio</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="logo-app">
+        <img src="logo.png" alt="QueueQuest Logo" />
+      </div>
+      <div class="header-text">
+        <div class="header-title">Acceso comercio</div>
+        <div class="header-subtitle">Inicia sesión para gestionar tu cola</div>
+      </div>
+    </header>
+
+    <main>
+      <div class="card">
+        <div>
+          <div class="label-small">Panel del comercio</div>
+          <p class="hint">
+            Introduce tu correo y contraseña para acceder al panel de QueueQuest.
+          </p>
+        </div>
+
+        <form id="loginForm" style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+          <div>
+            <label class="label-small" for="email">Correo electrónico</label>
+            <input
+              id="email"
+              type="email"
+              required
+              style="width: 100%; margin-top: 4px; padding: 10px 12px; border-radius: 12px; border: 1px solid #d1d5db; font-size: 14px;"
+              placeholder="aurora@queuequest.com"
+            />
+          </div>
+
+          <div>
+            <label class="label-small" for="password">Contraseña</label>
+            <input
+              id="password"
+              type="password"
+              required
+              style="width: 100%; margin-top: 4px; padding: 10px 12px; border-radius: 12px; border: 1px solid #d1d5db; font-size: 14px;"
+              placeholder="********"
+            />
+          </div>
+
+          <button class="btn btn-primary" type="submit">
+            <span class="icon">🔐</span>
+            <span>Entrar al panel</span>
+          </button>
+
+          <p class="hint" id="loginError" style="color: #b91c1c; display: none;">
+            Error al iniciar sesión. Revisa tus credenciales.
+          </p>
+        </form>
+      </div>
+    </main>
+
+    <footer>
+      Prototipo web – Login comercio · QueueQuest
+    </footer>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDbVEF05RYFOQIEFBGqwFun6gG5-NOkoJs",
+      authDomain: "queuequest-a1303.firebaseapp.com",
+      projectId: "queuequest-a1303",
+      storageBucket: "queuequest-a1303.firebasestorage.app",
+      messagingSenderId: "917209444646",
+      appId: "1:917209444646:web:7672c88b270395fa1211e7",
+      measurementId: "G-15TZX71SGN"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const auth = getAuth(app);
+
+    const loginForm = document.getElementById("loginForm");
+    const loginError = document.getElementById("loginError");
+
+    // Si ya está logueado, lo mandamos directo al panel
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "comercio.html";
+      }
+    });
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      loginError.style.display = "none";
+
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        // onAuthStateChanged hará el redirect
+      } catch (err) {
+        console.error("Error login:", err);
+        loginError.style.display = "block";
+      }
+    });
+  </script>
+</body>
+
+</html>

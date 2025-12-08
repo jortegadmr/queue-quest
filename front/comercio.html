@@ -15,7 +15,7 @@
         <img src="logo.png" alt="QueueQuest Logo">
       </div>
       <div class="header-text">
-        <div class="header-title">Cafetería Aurora</div>
+        <div class="header-title" id="nombreLocalPanel">Cafetería Aurora</div>
         <div class="header-subtitle">Panel de cola · QueueQuest</div>
       </div>
     </header>
@@ -23,6 +23,7 @@
     <main>
       <div class="card card-commerce">
 
+        <!-- Estado cola -->
         <div class="commerce-header">
           <div>
             <div class="label-small">Estado de la cola</div>
@@ -31,9 +32,9 @@
             </div>
           </div>
 
-          <div class="pill pill-commerce">
+          <div class="pill pill-commerce" id="pillEstadoCola">
             <span class="pill-dot"></span>
-            Cola abierta
+            <span id="textoEstadoCola">Cola abierta</span>
           </div>
         </div>
 
@@ -41,18 +42,18 @@
         <section class="commerce-current">
           <div class="current-block">
             <div class="label-small">Turno actual</div>
-            <div class="current-number">041</div>
-            <div class="current-secondary">
-              Último turno llamado hace 2 min
+            <div class="current-number" id="currentNumber">--</div>
+            <div class="current-secondary" id="currentSecondary">
+              Aún no se ha llamado ningún turno.
             </div>
           </div>
 
           <div class="current-controls">
-            <button class="btn btn-primary btn-full">
+            <button class="btn btn-primary btn-full" id="btnLlamarSiguiente">
               <span class="icon">📣</span>
-              <span>Llamar siguiente (042)</span>
+              <span id="textoLlamarSiguiente">Llamar siguiente</span>
             </button>
-            <button class="btn btn-secondary btn-full">
+            <button class="btn btn-secondary btn-full" id="btnPausarCola">
               <span class="icon">⏸️</span>
               <span>Pausar cola</span>
             </button>
@@ -63,15 +64,15 @@
         <section class="commerce-metrics">
           <div class="metric metric-commerce">
             <div class="metric-label">Personas en cola</div>
-            <div class="metric-value">7</div>
+            <div class="metric-value" id="metricPersonasCola">0</div>
           </div>
           <div class="metric metric-commerce">
             <div class="metric-label">Tiempo medio</div>
-            <div class="metric-value">4 min</div>
+            <div class="metric-value" id="metricTiempoMedio">4 min</div>
           </div>
           <div class="metric metric-commerce">
             <div class="metric-label">Atendidos hoy</div>
-            <div class="metric-value">38</div>
+            <div class="metric-value" id="metricAtendidosHoy">0</div>
           </div>
         </section>
 
@@ -93,31 +94,8 @@
               <span>Espera</span>
             </div>
 
-            <div class="queue-row">
-              <span>042</span>
-              <span class="chip chip-next">Siguiente</span>
-              <span>~ 3 min</span>
-            </div>
-            <div class="queue-row">
-              <span>043</span>
-              <span class="chip">En cola</span>
-              <span>~ 7 min</span>
-            </div>
-            <div class="queue-row">
-              <span>044</span>
-              <span class="chip">En cola</span>
-              <span>~ 11 min</span>
-            </div>
-            <div class="queue-row">
-              <span>045</span>
-              <span class="chip">En cola</span>
-              <span>~ 15 min</span>
-            </div>
-            <div class="queue-row">
-              <span>046</span>
-              <span class="chip chip-new">Recién llegado</span>
-              <span>~ 19 min</span>
-            </div>
+            <!-- Aquí inyectamos las filas desde JS -->
+            <div id="queueRows"></div>
           </div>
         </section>
 
@@ -128,6 +106,306 @@
       Prototipo web – Panel del comercio · Vista móvil
     </footer>
   </div>
+
+  <!-- Lógica Firebase + panel -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+    import {
+      getFirestore,
+      doc,
+      getDoc,
+      updateDoc,
+      collection,
+      getDocs,
+      query,
+      where,
+      orderBy
+    } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+    import {
+      getAuth,
+      onAuthStateChanged,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDbVEF05RYFOQIEFBGqwFun6gG5-NOkoJs",
+      authDomain: "queuequest-a1303.firebaseapp.com",
+      projectId: "queuequest-a1303",
+      storageBucket: "queuequest-a1303.firebasestorage.app",
+      messagingSenderId: "917209444646",
+      appId: "1:917209444646:web:7672c88b270395fa1211e7",
+      measurementId: "G-15TZX71SGN"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
+    console.log("Panel comercio conectado a Firebase");
+    const auth = getAuth(app);
+
+
+    let COLA_ID = null;               // se decide según el usuario
+    let TIEMPO_MEDIO_MINUTOS = 4;     // valor por defecto, sobreescribible
+
+
+    // DOM
+    const pillEstadoCola = document.getElementById("pillEstadoCola");
+    const textoEstadoCola = document.getElementById("textoEstadoCola");
+    const currentNumberEl = document.getElementById("currentNumber");
+    const currentSecondaryEl = document.getElementById("currentSecondary");
+    const textoLlamarSiguienteEl = document.getElementById("textoLlamarSiguiente");
+
+    const metricPersonasColaEl = document.getElementById("metricPersonasCola");
+    const metricTiempoMedioEl = document.getElementById("metricTiempoMedio");
+    const metricAtendidosHoyEl = document.getElementById("metricAtendidosHoy");
+
+    const queueRowsContainer = document.getElementById("queueRows");
+
+    const btnLlamarSiguiente = document.getElementById("btnLlamarSiguiente");
+    const btnPausarCola = document.getElementById("btnPausarCola");
+    const btnPausarColaIcon = btnPausarCola.querySelector(".icon");
+    const btnPausarColaText = btnPausarCola.querySelector("span:not(.icon)");
+
+    const nombreLocalPanelEl = document.getElementById("nombreLocalPanel");
+
+    // Dado un usuario autenticado, decidimos qué cola gestiona
+    function obtenerColaIdParaUsuario(user) {
+      if (!user || !user.email) return null;
+
+      const email = user.email.toLowerCase();
+
+      // Mapeo sencillo para el DAM: un usuario = una cola
+      if (email === "aurora@queuequest.es") {
+        return "cafeteria-aurora";
+      }
+
+      if (email === "verduras@paco.es") {
+        return "verduras-paco";
+      }
+
+      // Fallback por si acaso
+      return "cafeteria-aurora";
+    }
+
+
+    // --------- Cargar estado inicial del panel ---------
+    async function cargarPanel() {
+      try {
+        const colaRef = doc(db, "colas", COLA_ID);
+        const colaSnap = await getDoc(colaRef);
+
+        if (!colaSnap.exists()) {
+          alert("La cola no existe.");
+          return;
+        }
+
+        const cola = colaSnap.data();
+        const ultimoLlamado = cola.ultimoLlamado ?? 0;
+        const numeroMaxEntregado = cola.numeroActual ?? 0;
+
+        // Actualizar título del panel y tiempo medio según el comercio
+        if (cola.nombreLocal && nombreLocalPanelEl) {
+          nombreLocalPanelEl.textContent = cola.nombreLocal;
+        }
+
+        if (typeof cola.tiempoMedioMinutos === "number") {
+          TIEMPO_MEDIO_MINUTOS = cola.tiempoMedioMinutos;
+        }
+
+        // Estado de la cola
+        const abierta = cola.estado === "abierta";
+        textoEstadoCola.textContent = abierta ? "Cola abierta" : "Cola pausada";
+        if (abierta) {
+          pillEstadoCola.classList.remove("pill-paused");
+        } else {
+          pillEstadoCola.classList.add("pill-paused");
+        }
+        // Texto e icono del botón pausar/reanudar
+        if (abierta) {
+          btnPausarColaText.textContent = "Pausar cola";
+          btnPausarColaIcon.textContent = "⏸️";
+        } else {
+          btnPausarColaText.textContent = "Reanudar cola";
+          btnPausarColaIcon.textContent = "▶️";
+        }
+
+        // Turno actual
+        if (ultimoLlamado > 0) {
+          currentNumberEl.textContent = String(ultimoLlamado).padStart(3, "0");
+          currentSecondaryEl.textContent = `Último turno llamado: ${ultimoLlamado}`;
+        } else {
+          currentNumberEl.textContent = "--";
+          currentSecondaryEl.textContent = "Aún no se ha llamado ningún turno.";
+        }
+
+        // Número que se llamará si se pulsa el botón
+        const siguienteNumero = ultimoLlamado < numeroMaxEntregado
+          ? ultimoLlamado + 1
+          : null;
+
+        if (siguienteNumero) {
+          textoLlamarSiguienteEl.textContent = `Llamar siguiente (${String(siguienteNumero).padStart(3, "0")})`;
+          btnLlamarSiguiente.disabled = false;
+        } else {
+          textoLlamarSiguienteEl.textContent = "No hay más turnos en cola";
+          btnLlamarSiguiente.disabled = true;
+        }
+
+        // Turnos de la cola
+        const turnosRef = collection(colaRef, "turnos");
+        const qTodos = query(turnosRef, orderBy("numero", "asc"));
+        const snapshot = await getDocs(qTodos);
+
+        const turnos = [];
+        snapshot.forEach((docSnap) => {
+          turnos.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        // Solo los que están en cola y aún no se han llamado
+        const turnosEnCola = turnos.filter(
+          (t) => t.estado === "en_cola" && t.numero > ultimoLlamado
+        );
+
+        // Métricas
+        const personasCola = turnosEnCola.length;
+        const atendidosHoy = cola.atendidosHoy ?? ultimoLlamado;
+        const tiempoMedio = TIEMPO_MEDIO_MINUTOS;
+
+        metricPersonasColaEl.textContent = personasCola;
+        metricTiempoMedioEl.textContent = `${tiempoMedio} min`;
+        metricAtendidosHoyEl.textContent = atendidosHoy;
+
+        // Tabla de próximos turnos (máx. 5)
+        queueRowsContainer.innerHTML = "";
+        turnosEnCola.slice(0, 5).forEach((t, index, arr) => {
+          const row = document.createElement("div");
+          row.className = "queue-row";
+
+          const spanNum = document.createElement("span");
+          spanNum.textContent = String(t.numero).padStart(3, "0");
+
+          const spanEstado = document.createElement("span");
+          const chip = document.createElement("span");
+          chip.className = "chip";
+
+          if (index === 0) {
+            chip.classList.add("chip-next");
+            chip.textContent = "Siguiente";
+          } else if (index === arr.length - 1 && arr.length > 1) {
+            chip.classList.add("chip-new");
+            chip.textContent = "Recién llegado";
+          } else {
+            chip.textContent = "En cola";
+          }
+          spanEstado.appendChild(chip);
+
+          const spanEspera = document.createElement("span");
+          const esperaEstimada = (index + 1) * tiempoMedio;
+          spanEspera.textContent = `~ ${esperaEstimada} min`;
+
+          row.appendChild(spanNum);
+          row.appendChild(spanEstado);
+          row.appendChild(spanEspera);
+
+          queueRowsContainer.appendChild(row);
+        });
+
+      } catch (err) {
+        console.error("Error al cargar panel:", err);
+        alert("No se ha podido cargar el panel del comercio.");
+      }
+    }
+
+    // --------- Llamar siguiente turno ---------
+    async function llamarSiguiente() {
+      try {
+        const colaRef = doc(db, "colas", COLA_ID);
+        const colaSnap = await getDoc(colaRef);
+
+        if (!colaSnap.exists()) {
+          alert("La cola no existe.");
+          return;
+        }
+
+        const cola = colaSnap.data();
+        const ultimoLlamado = cola.ultimoLlamado ?? 0;
+        const numeroMaxEntregado = cola.numeroActual ?? 0;
+
+        const siguienteNumero = ultimoLlamado + 1;
+        if (siguienteNumero > numeroMaxEntregado) {
+          alert("No hay más turnos en cola.");
+          return;
+        }
+
+        // Buscar el turno con ese número
+        const turnosRef = collection(colaRef, "turnos");
+        const q = query(turnosRef, where("numero", "==", siguienteNumero));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+          console.warn("No se encontró el documento para el turno", siguienteNumero);
+        } else {
+          const docSnap = snapshot.docs[0];
+          await updateDoc(docSnap.ref, { estado: "llamado" });
+        }
+
+        // Actualizar la cola: último llamado y atendidos
+        const atendidosHoyActual = cola.atendidosHoy ?? ultimoLlamado;
+        await updateDoc(colaRef, {
+          ultimoLlamado: siguienteNumero,
+          atendidosHoy: atendidosHoyActual + 1
+        });
+
+        await cargarPanel();
+      } catch (err) {
+        console.error("Error al llamar siguiente:", err);
+        alert("No se ha podido llamar al siguiente turno.");
+      }
+    }
+
+    // --------- Pausar / reanudar cola ---------
+    async function togglePausaCola() {
+      try {
+        const colaRef = doc(db, "colas", COLA_ID);
+        const colaSnap = await getDoc(colaRef);
+        if (!colaSnap.exists()) return;
+
+        const cola = colaSnap.data();
+        const nuevoEstado = cola.estado === "abierta" ? "pausada" : "abierta";
+
+        await updateDoc(colaRef, { estado: nuevoEstado });
+        await cargarPanel();
+      } catch (err) {
+        console.error("Error al pausar/reanudar cola:", err);
+      }
+    }
+
+    // Eventos
+    btnLlamarSiguiente.addEventListener("click", llamarSiguiente);
+    btnPausarCola.addEventListener("click", togglePausaCola);
+
+    // Cargar panel solo si el usuario está autenticado y asignamos la cola
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      COLA_ID = obtenerColaIdParaUsuario(user);
+      console.log("Panel gestionando cola:", COLA_ID, "para usuario:", user.email);
+
+      if (!COLA_ID) {
+        alert("Este usuario no tiene una cola asignada.");
+        return;
+      }
+
+      cargarPanel();
+    });
+
+
+  </script>
 </body>
 
 </html>

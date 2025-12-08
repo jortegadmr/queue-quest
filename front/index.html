@@ -27,14 +27,15 @@
                 <div class="view active" id="view-inicio">
                     <div>
                         <div class="label-small">Estás en</div>
-                        <div style="font-size: 18px; font-weight: 600; margin-top: 4px;">
+                        <div id="nombreLocal" style="font-size: 18px; font-weight: 600; margin-top: 4px;">
                             Cafetería Aurora
                         </div>
-                        <p class="hint">
+                        <p class="hint" id="descripcionLocal">
                             Estás en Cafetería Aurora, un local con buen café y opciones caseras. Pide tu número y sigue
                             tu turno desde aquí.
                         </p>
                     </div>
+
 
                     <div class="btn-row">
                         <button class="btn btn-primary" id="btnPedirNumero">
@@ -114,6 +115,26 @@
                     </div>
                 </div>
 
+                <!-- VISTA 3: ofertas del día -->
+                <div class="view" id="view-ofertas">
+                    <div>
+                        <div class="label-small">Ofertas del día</div>
+                        <p class="hint">
+                            Descuentos y sugerencias del local solo por estar en la cola.
+                        </p>
+                    </div>
+
+                    <div id="listaOfertas" style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Se rellena desde JavaScript -->
+                    </div>
+
+                    <button class="btn btn-secondary btn-full" id="btnVolverDesdeOfertas" style="margin-top: 12px;">
+                        <span class="icon">⬅️</span>
+                        <span>Volver a tu turno</span>
+                    </button>
+                </div>
+
+
             </div>
         </main>
 
@@ -136,7 +157,12 @@
             query,
             where
         } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+        import {
+            getAuth,
+            signInAnonymously
+        } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
 
+        // --- Configuración de Firebase  ---
         const firebaseConfig = {
             apiKey: "AIzaSyDbVEF05RYFOQIEFBGqwFun6gG5-NOkoJs",
             authDomain: "queuequest-a1303.firebaseapp.com",
@@ -150,11 +176,28 @@
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
-        console.log("🔥 Firebase inicializado correctamente");
+        const auth = getAuth(app);
+        console.log("Firebase inicializado correctamente");
 
-        // --- Constantes ---
-        const COLA_ID = "cafeteria-aurora";
-        const TIEMPO_MEDIO_MINUTOS = 4; // estimación simple de 4 min por persona
+        // Detectar cola desde la URL
+        const params = new URLSearchParams(window.location.search);
+        let COLA_ID = params.get("cola") || "cafeteria-aurora"; // fallback por si no viene nada
+        console.log("Cola activa:", COLA_ID);
+
+        let TIEMPO_MEDIO_MINUTOS = 4; // estimación simple de 4 min por persona
+
+        // --- Asegurar autenticación anónima ---
+        async function asegurarAuthAnonimo() {
+            if (!auth.currentUser) {
+                await signInAnonymously(auth);
+                console.log("Usuario anónimo autenticado");
+            }
+        }
+
+        // Lanzamos la autenticación anónima en segundo plano al cargar
+        asegurarAuthAnonimo().catch((err) => {
+            console.error("Error en auth anónima:", err);
+        });
 
         // --- Referencias DOM ---
         const viewInicio = document.getElementById("view-inicio");
@@ -166,6 +209,42 @@
         const tiempoEstimadoEl = document.getElementById("tiempoEstimado");
         const btnQueueQuest = document.getElementById("btnQueueQuest");
         const btnOfertas = document.getElementById("btnOfertas");
+        const viewOfertas = document.getElementById("view-ofertas");
+        const listaOfertasEl = document.getElementById("listaOfertas");
+        const btnVolverDesdeOfertas = document.getElementById("btnVolverDesdeOfertas");
+        const nombreLocalEl = document.getElementById("nombreLocal");
+        const descripcionLocalEl = document.getElementById("descripcionLocal");
+
+
+        // --- Cargar datos estáticos del comercio (nombre, descripción, tiempo medio) ---
+        async function cargarDatosCola() {
+            try {
+                const colaRef = doc(db, "colas", COLA_ID);
+                const colaSnap = await getDoc(colaRef);
+
+                if (!colaSnap.exists()) {
+                    console.warn("La cola no existe, usando textos por defecto:", COLA_ID);
+                    return;
+                }
+
+                const cola = colaSnap.data();
+
+                if (cola.nombreLocal && nombreLocalEl) {
+                    nombreLocalEl.textContent = cola.nombreLocal;
+                }
+
+                if (cola.descripcionLocal && descripcionLocalEl) {
+                    descripcionLocalEl.textContent = cola.descripcionLocal;
+                }
+
+                if (typeof cola.tiempoMedioMinutos === "number") {
+                    TIEMPO_MEDIO_MINUTOS = cola.tiempoMedioMinutos;
+                    console.log("Tiempo medio desde Firestore:", TIEMPO_MEDIO_MINUTOS, "min");
+                }
+            } catch (err) {
+                console.error("Error al cargar datos de la cola:", err);
+            }
+        }
 
         // --- UI ---
         function mostrarVistaTurno({ numero, personasDelante, eta }) {
@@ -176,6 +255,19 @@
             viewInicio.classList.remove("active");
             viewTurno.classList.add("active");
         }
+
+        function mostrarVistaOfertas() {
+            viewInicio.classList.remove("active");
+            viewTurno.classList.remove("active");
+            viewOfertas.classList.add("active");
+        }
+
+        function volverDesdeOfertas() {
+            viewOfertas.classList.remove("active");
+            // volvemos a la vista de turno porque solo tiene sentido entrar a ofertas si ya hay turno
+            viewTurno.classList.add("active");
+        }
+
 
         // --- Firestore: Pedir número ---
         async function pedirTurno() {
@@ -301,21 +393,124 @@
             }
         }
 
+        // --- Cargar ofertas del día ---
+        async function cargarOfertas() {
+            try {
+                const colaRef = doc(db, "colas", COLA_ID);
+                const ofertasRef = collection(colaRef, "ofertas");
+
+                const snapshot = await getDocs(ofertasRef);
+                const ofertas = [];
+                snapshot.forEach((docSnap) => {
+                    const o = docSnap.data();
+                    if (o.activo !== false) { // por defecto true si no existe
+                        ofertas.push({ id: docSnap.id, ...o });
+                    }
+                });
+
+                // ordenar por 'orden' si existe, si no por título
+                ofertas.sort((a, b) => {
+                    const ordA = a.orden ?? 999;
+                    const ordB = b.orden ?? 999;
+                    if (ordA !== ordB) return ordA - ordB;
+                    return (a.titulo || "").localeCompare(b.titulo || "");
+                });
+
+                // Limpiar lista
+                listaOfertasEl.innerHTML = "";
+
+                if (ofertas.length === 0) {
+                    const vacio = document.createElement("p");
+                    vacio.className = "hint";
+                    vacio.textContent = "Hoy no hay ofertas activas en este local.";
+                    listaOfertasEl.appendChild(vacio);
+                    return;
+                }
+
+                // Renderizar ofertas
+                ofertas.forEach((oferta) => {
+                    const card = document.createElement("div");
+                    card.style.padding = "10px 12px";
+                    card.style.borderRadius = "16px";
+                    card.style.border = "1px solid #e5e7eb";
+                    card.style.background = "#f9fafb";
+                    card.style.display = "flex";
+                    card.style.flexDirection = "column";
+                    card.style.gap = "4px";
+
+                    const titulo = document.createElement("div");
+                    titulo.style.fontSize = "14px";
+                    titulo.style.fontWeight = "600";
+                    titulo.textContent = oferta.titulo || "Oferta";
+
+                    const desc = document.createElement("div");
+                    desc.style.fontSize = "12px";
+                    desc.style.color = "#6b7280";
+                    desc.textContent = oferta.descripcion || "";
+
+                    const precios = document.createElement("div");
+                    precios.style.fontSize = "13px";
+                    precios.style.marginTop = "4px";
+
+                    if (oferta.precioAntes != null && oferta.precioAhora != null) {
+                        const antes = document.createElement("span");
+                        antes.style.textDecoration = "line-through";
+                        antes.style.color = "#9ca3af";
+                        antes.textContent = `${oferta.precioAntes.toFixed(2)} €`;
+
+                        const ahora = document.createElement("span");
+                        ahora.style.marginLeft = "8px";
+                        ahora.style.fontWeight = "600";
+                        ahora.textContent = `${oferta.precioAhora.toFixed(2)} €`;
+
+                        precios.appendChild(antes);
+                        precios.appendChild(ahora);
+                    }
+
+                    card.appendChild(titulo);
+                    card.appendChild(desc);
+                    if (precios.childNodes.length) {
+                        card.appendChild(precios);
+                    }
+
+                    listaOfertasEl.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Error al cargar ofertas:", err);
+                listaOfertasEl.innerHTML = "";
+                const p = document.createElement("p");
+                p.className = "hint";
+                p.style.color = "#b91c1c";
+                p.textContent = "No se han podido cargar las ofertas del día.";
+                listaOfertasEl.appendChild(p);
+            }
+        }
+
+
 
         // --- Eventos ---
         btnPedirNumero.addEventListener("click", pedirTurno);
 
         btnLoginComercio.addEventListener("click", () => {
-            window.location.href = "comercio.html";
+            window.location.href = "login.html";
         });
 
         btnQueueQuest.addEventListener("click", () => {
             alert("Zona gamificada (QueueQuest) – se implementará en fases posteriores.");
         });
 
-        btnOfertas.addEventListener("click", () => {
-            alert("Ofertas del día – contenido configurable por el comercio.");
+        btnOfertas.addEventListener("click", async () => {
+            await cargarOfertas();
+            mostrarVistaOfertas();
         });
+
+        btnVolverDesdeOfertas.addEventListener("click", () => {
+            volverDesdeOfertas();
+        });
+
+        // Cargar nombre, descripción y tiempo medio del comercio
+        cargarDatosCola();
+
         // Al cargar la página, intentamos recuperar un turno guardado
         cargarTurnoExistente();
     </script>
