@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QueueQuest</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app">
+        <header>
+            <div class="logo-app">
+                <img src="logo.png" alt="QueueQuest Logo">
+            </div>
+            <div class="header-text">
+                <div class="header-title">QueueQuest</div>
+                <div class="header-subtitle">Convierte la espera en experiencia</div>
+            </div>
+        </header>
+
+        <main>
+            <div class="card">
+
+                <!-- VISTA 1: tras escanear el QR -->
+                <div class="view active" id="view-inicio">
+                    <div>
+                        <div class="label-small">Estás en</div>
+                        <div id="nombreLocal" style="font-size: 18px; font-weight: 600; margin-top: 4px;">
+                            Cafetería Aurora
+                        </div>
+                        <p class="hint" id="descripcionLocal">
+                            Estás en Cafetería Aurora, un local con buen café y opciones caseras. Pide tu número y sigue
+                            tu turno desde aquí.
+                        </p>
+                    </div>
+
+
+                    <div class="btn-row">
+                        <button class="btn btn-primary" id="btnPedirNumero">
+                            <span class="icon">🎟️</span>
+                            <span>Pedir número</span>
+                        </button>
+
+                        <button class="btn btn-secondary" id="btnLoginComercio">
+                            <span class="icon">🔐</span>
+                            <span>Login comercio</span>
+                        </button>
+                    </div>
+
+                    <p class="hint">
+                        Sin registro. Sin descargas. Todo desde tu móvil.
+                    </p>
+                </div>
+
+                <!-- VISTA 2: turno asignado -->
+                <div class="view" id="view-turno">
+                    <div class="queue-status">
+                        <div class="pill">
+                            <span class="pill-dot"></span>
+                            Turno activo
+                        </div>
+
+                        <div>
+                            <div class="label-small">Tu número</div>
+                            <div class="main-number" id="numeroTurno">042</div>
+                        </div>
+
+                        <div class="queue-metrics">
+                            <div class="metric">
+                                <div class="metric-label">Personas delante</div>
+                                <div class="metric-value" id="personasDelante">3</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">Tiempo estimado</div>
+                                <div class="metric-value" id="tiempoEstimado">12 min</div>
+                            </div>
+                        </div>
+
+                        <div class="alert">
+                            <span class="icon">🔔</span>
+                            <span>
+                                Permanece atento. Cuando se acerque tu turno, te avisaremos desde la pantalla del local.
+                            </span>
+                        </div>
+
+                        <div class="subcard">
+                            <div class="subcard-title">Mientras esperas…</div>
+                            <div class="subcard-text">
+                                Descubre la carta, completa pequeñas misiones o aprovecha las ofertas del día sin perder
+                                tu turno.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bottom-actions">
+                        <button class="btn-ghost" id="btnQueueQuest">
+                            <div class="btn-ghost-title">
+                                <span>🎮 QueueQuest</span>
+                            </div>
+                            <div class="btn-ghost-sub">
+                                Misiones rápidas para hacer la espera más llevadera.
+                            </div>
+                        </button>
+
+                        <button class="btn-ghost" id="btnOfertas">
+                            <div class="btn-ghost-title">
+                                <span>💸 Ofertas del día</span>
+                            </div>
+                            <div class="btn-ghost-sub">
+                                Descuentos y sugerencias del local solo por estar en la cola.
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- VISTA 3: ofertas del día -->
+                <div class="view" id="view-ofertas">
+                    <div>
+                        <div class="label-small">Ofertas del día</div>
+                        <p class="hint">
+                            Descuentos y sugerencias del local solo por estar en la cola.
+                        </p>
+                    </div>
+
+                    <div id="listaOfertas" style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Se rellena desde JavaScript -->
+                    </div>
+
+                    <button class="btn btn-secondary btn-full" id="btnVolverDesdeOfertas" style="margin-top: 12px;">
+                        <span class="icon">⬅️</span>
+                        <span>Volver a tu turno</span>
+                    </button>
+                </div>
+
+
+            </div>
+        </main>
+
+        <footer>
+            Prototipo web – QueueQuest · Vista móvil
+        </footer>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-analytics.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            updateDoc,
+            collection,
+            addDoc,
+            getDocs,
+            query,
+            where
+        } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+        import {
+            getAuth,
+            signInAnonymously
+        } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+        // --- Configuración de Firebase  ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDbVEF05RYFOQIEFBGqwFun6gG5-NOkoJs",
+            authDomain: "queuequest-a1303.firebaseapp.com",
+            projectId: "queuequest-a1303",
+            storageBucket: "queuequest-a1303.firebasestorage.app",
+            messagingSenderId: "917209444646",
+            appId: "1:917209444646:web:7672c88b270395fa1211e7",
+            measurementId: "G-15TZX71SGN"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        console.log("Firebase inicializado correctamente");
+
+        // Detectar cola desde la URL
+        const params = new URLSearchParams(window.location.search);
+        let COLA_ID = params.get("cola") || "cafeteria-aurora"; // fallback por si no viene nada
+        console.log("Cola activa:", COLA_ID);
+
+        let TIEMPO_MEDIO_MINUTOS = 4; // estimación simple de 4 min por persona
+
+        // --- Asegurar autenticación anónima ---
+        async function asegurarAuthAnonimo() {
+            if (!auth.currentUser) {
+                await signInAnonymously(auth);
+                console.log("Usuario anónimo autenticado");
+            }
+        }
+
+        // Lanzamos la autenticación anónima en segundo plano al cargar
+        asegurarAuthAnonimo().catch((err) => {
+            console.error("Error en auth anónima:", err);
+        });
+
+        // --- Referencias DOM ---
+        const viewInicio = document.getElementById("view-inicio");
+        const viewTurno = document.getElementById("view-turno");
+        const btnPedirNumero = document.getElementById("btnPedirNumero");
+        const btnLoginComercio = document.getElementById("btnLoginComercio");
+        const numeroTurnoEl = document.getElementById("numeroTurno");
+        const personasDelanteEl = document.getElementById("personasDelante");
+        const tiempoEstimadoEl = document.getElementById("tiempoEstimado");
+        const btnQueueQuest = document.getElementById("btnQueueQuest");
+        const btnOfertas = document.getElementById("btnOfertas");
+        const viewOfertas = document.getElementById("view-ofertas");
+        const listaOfertasEl = document.getElementById("listaOfertas");
+        const btnVolverDesdeOfertas = document.getElementById("btnVolverDesdeOfertas");
+        const nombreLocalEl = document.getElementById("nombreLocal");
+        const descripcionLocalEl = document.getElementById("descripcionLocal");
+
+
+        // --- Cargar datos estáticos del comercio (nombre, descripción, tiempo medio) ---
+        async function cargarDatosCola() {
+            try {
+                const colaRef = doc(db, "colas", COLA_ID);
+                const colaSnap = await getDoc(colaRef);
+
+                if (!colaSnap.exists()) {
+                    console.warn("La cola no existe, usando textos por defecto:", COLA_ID);
+                    return;
+                }
+
+                const cola = colaSnap.data();
+
+                if (cola.nombreLocal && nombreLocalEl) {
+                    nombreLocalEl.textContent = cola.nombreLocal;
+                }
+
+                if (cola.descripcionLocal && descripcionLocalEl) {
+                    descripcionLocalEl.textContent = cola.descripcionLocal;
+                }
+
+                if (typeof cola.tiempoMedioMinutos === "number") {
+                    TIEMPO_MEDIO_MINUTOS = cola.tiempoMedioMinutos;
+                    console.log("Tiempo medio desde Firestore:", TIEMPO_MEDIO_MINUTOS, "min");
+                }
+            } catch (err) {
+                console.error("Error al cargar datos de la cola:", err);
+            }
+        }
+
+        // --- UI ---
+        function mostrarVistaTurno({ numero, personasDelante, eta }) {
+            numeroTurnoEl.textContent = String(numero).padStart(3, "0");
+            personasDelanteEl.textContent = personasDelante;
+            tiempoEstimadoEl.textContent = `${eta} min`;
+
+            viewInicio.classList.remove("active");
+            viewTurno.classList.add("active");
+        }
+
+        function mostrarVistaOfertas() {
+            viewInicio.classList.remove("active");
+            viewTurno.classList.remove("active");
+            viewOfertas.classList.add("active");
+        }
+
+        function volverDesdeOfertas() {
+            viewOfertas.classList.remove("active");
+            // volvemos a la vista de turno porque solo tiene sentido entrar a ofertas si ya hay turno
+            viewTurno.classList.add("active");
+        }
+
+
+        // --- Firestore: Pedir número ---
+        async function pedirTurno() {
+            try {
+                const colaRef = doc(db, "colas", COLA_ID);
+                const colaSnap = await getDoc(colaRef);
+
+                if (!colaSnap.exists()) {
+                    alert("La cola no existe en la base de datos.");
+                    return;
+                }
+
+                const datosCola = colaSnap.data();
+                const numeroActual = datosCola.numeroActual ?? 0;
+                const nuevoNumero = numeroActual + 1;
+
+                // 1) Crear turno
+                const turnosRef = collection(colaRef, "turnos");
+                const nuevoTurnoDoc = await addDoc(turnosRef, {
+                    numero: nuevoNumero,
+                    estado: "en_cola",
+                    creadoEn: new Date(),
+                    eta: 0,         // lo recalculamos debajo
+                    posicion: 0     // idem
+                });
+
+                // 2) Calcular personas delante:
+                //    todos los turnos "en_cola" con numero < nuevoNumero
+                const q = query(turnosRef, where("estado", "==", "en_cola"));
+                const snapshot = await getDocs(q);
+
+                let personasDelante = 0;
+                snapshot.forEach((docSnap) => {
+                    const t = docSnap.data();
+                    if (t.numero < nuevoNumero) {
+                        personasDelante++;
+                    }
+                });
+
+                // 3) Calcular ETA simple
+                const eta = personasDelante * TIEMPO_MEDIO_MINUTOS;
+
+                // 4) Actualizar el turno con posición y eta
+                await updateDoc(nuevoTurnoDoc, {
+                    posicion: personasDelante,
+                    eta: eta
+                });
+
+                // 5) Actualizar númeroActual de la cola
+                await updateDoc(colaRef, {
+                    numeroActual: nuevoNumero
+                });
+
+                // 6) Guardar en localStorage
+                localStorage.setItem("colaId", COLA_ID);
+                localStorage.setItem("ticketId", nuevoTurnoDoc.id);
+
+                // 7) Mostrar en pantalla
+                mostrarVistaTurno({
+                    numero: nuevoNumero,
+                    personasDelante,
+                    eta
+                });
+
+            } catch (err) {
+                console.error("Error al pedir turno:", err);
+                alert("No se ha podido pedir turno. Inténtalo de nuevo más tarde.");
+            }
+        }
+
+        // --- Firestore: Cargar turno existente (al recargar página) ---
+        async function cargarTurnoExistente() {
+            const colaId = localStorage.getItem("colaId");
+            const ticketId = localStorage.getItem("ticketId");
+
+            if (!colaId || !ticketId) {
+                // No hay turno guardado, dejamos la vista de inicio
+                return;
+            }
+
+            try {
+                const colaRef = doc(db, "colas", colaId);
+                const ticketRef = doc(colaRef, "turnos", ticketId);
+
+                const [colaSnap, ticketSnap] = await Promise.all([
+                    getDoc(colaRef),
+                    getDoc(ticketRef)
+                ]);
+
+                if (!colaSnap.exists() || !ticketSnap.exists()) {
+                    // Algo raro: limpiamos y dejamos vista inicio
+                    localStorage.removeItem("colaId");
+                    localStorage.removeItem("ticketId");
+                    return;
+                }
+
+                const turno = ticketSnap.data();
+
+                // Recalcular personas delante con los turnos actuales
+                const turnosRef = collection(colaRef, "turnos");
+                const q = query(turnosRef, where("estado", "==", "en_cola"));
+                const snapshot = await getDocs(q);
+
+                let personasDelante = 0;
+                snapshot.forEach((docSnap) => {
+                    const t = docSnap.data();
+                    if (t.numero < turno.numero) {
+                        personasDelante++;
+                    }
+                });
+
+                const eta = personasDelante * TIEMPO_MEDIO_MINUTOS;
+
+                mostrarVistaTurno({
+                    numero: turno.numero,
+                    personasDelante,
+                    eta
+                });
+
+            } catch (err) {
+                console.error("Error al cargar turno existente:", err);
+                // En caso de error, no bloqueamos la app
+            }
+        }
+
+        // --- Cargar ofertas del día ---
+        async function cargarOfertas() {
+            try {
+                const colaRef = doc(db, "colas", COLA_ID);
+                const ofertasRef = collection(colaRef, "ofertas");
+
+                const snapshot = await getDocs(ofertasRef);
+                const ofertas = [];
+                snapshot.forEach((docSnap) => {
+                    const o = docSnap.data();
+                    if (o.activo !== false) { // por defecto true si no existe
+                        ofertas.push({ id: docSnap.id, ...o });
+                    }
+                });
+
+                // ordenar por 'orden' si existe, si no por título
+                ofertas.sort((a, b) => {
+                    const ordA = a.orden ?? 999;
+                    const ordB = b.orden ?? 999;
+                    if (ordA !== ordB) return ordA - ordB;
+                    return (a.titulo || "").localeCompare(b.titulo || "");
+                });
+
+                // Limpiar lista
+                listaOfertasEl.innerHTML = "";
+
+                if (ofertas.length === 0) {
+                    const vacio = document.createElement("p");
+                    vacio.className = "hint";
+                    vacio.textContent = "Hoy no hay ofertas activas en este local.";
+                    listaOfertasEl.appendChild(vacio);
+                    return;
+                }
+
+                // Renderizar ofertas
+                ofertas.forEach((oferta) => {
+                    const card = document.createElement("div");
+                    card.style.padding = "10px 12px";
+                    card.style.borderRadius = "16px";
+                    card.style.border = "1px solid #e5e7eb";
+                    card.style.background = "#f9fafb";
+                    card.style.display = "flex";
+                    card.style.flexDirection = "column";
+                    card.style.gap = "4px";
+
+                    const titulo = document.createElement("div");
+                    titulo.style.fontSize = "14px";
+                    titulo.style.fontWeight = "600";
+                    titulo.textContent = oferta.titulo || "Oferta";
+
+                    const desc = document.createElement("div");
+                    desc.style.fontSize = "12px";
+                    desc.style.color = "#6b7280";
+                    desc.textContent = oferta.descripcion || "";
+
+                    const precios = document.createElement("div");
+                    precios.style.fontSize = "13px";
+                    precios.style.marginTop = "4px";
+
+                    if (oferta.precioAntes != null && oferta.precioAhora != null) {
+                        const antes = document.createElement("span");
+                        antes.style.textDecoration = "line-through";
+                        antes.style.color = "#9ca3af";
+                        antes.textContent = `${oferta.precioAntes.toFixed(2)} €`;
+
+                        const ahora = document.createElement("span");
+                        ahora.style.marginLeft = "8px";
+                        ahora.style.fontWeight = "600";
+                        ahora.textContent = `${oferta.precioAhora.toFixed(2)} €`;
+
+                        precios.appendChild(antes);
+                        precios.appendChild(ahora);
+                    }
+
+                    card.appendChild(titulo);
+                    card.appendChild(desc);
+                    if (precios.childNodes.length) {
+                        card.appendChild(precios);
+                    }
+
+                    listaOfertasEl.appendChild(card);
+                });
+            } catch (err) {
+                console.error("Error al cargar ofertas:", err);
+                listaOfertasEl.innerHTML = "";
+                const p = document.createElement("p");
+                p.className = "hint";
+                p.style.color = "#b91c1c";
+                p.textContent = "No se han podido cargar las ofertas del día.";
+                listaOfertasEl.appendChild(p);
+            }
+        }
+
+
+
+        // --- Eventos ---
+        btnPedirNumero.addEventListener("click", pedirTurno);
+
+        btnLoginComercio.addEventListener("click", () => {
+            window.location.href = "login.html";
+        });
+
+        btnQueueQuest.addEventListener("click", () => {
+            alert("Zona gamificada (QueueQuest) – se implementará en fases posteriores.");
+        });
+
+        btnOfertas.addEventListener("click", async () => {
+            await cargarOfertas();
+            mostrarVistaOfertas();
+        });
+
+        btnVolverDesdeOfertas.addEventListener("click", () => {
+            volverDesdeOfertas();
+        });
+
+        // Cargar nombre, descripción y tiempo medio del comercio
+        cargarDatosCola();
+
+        // Al cargar la página, intentamos recuperar un turno guardado
+        cargarTurnoExistente();
+    </script>
+
+</body>
+
+</html>
