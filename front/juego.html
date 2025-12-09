@@ -199,10 +199,12 @@
                     frame: 0,
                     time: 0,
                     muerto: false
-                }
+                },
+                mostrarPantallaInicio: true
             };
 
             let loopId = null;
+            let loadingTick = 0; // para animar el texto de carga
 
             function getHitboxJugador(jugador) {
                 // Hitbox más pequeña, solo la parte baja del cuerpo
@@ -270,6 +272,7 @@
 
             function iniciarJuego() {
                 resetJuego();
+                state.mostrarPantallaInicio = false;
                 state.enMarcha = true;
                 state.ultimaMarcaTiempo = performance.now();
 
@@ -363,18 +366,21 @@
 
                 // --- Pantalla de carga mientras no están las imágenes ---
                 if (!assetsListos()) {
-                    ctx.fillStyle = "#020617"; // fondo oscuro
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
                     ctx.font = "22px Monogram";
                     ctx.fillStyle = "#e5e7eb";
                     ctx.textAlign = "center";
                     ctx.fillText("QueueQuest", canvas.width / 2, canvas.height / 2 - 10);
 
                     ctx.font = "14px Monogram";
-                    ctx.fillText("Pulse para jugar", canvas.width / 2, canvas.height / 2 + 16);
+
+                    // Animación de puntos: "", ".", "..", "..."
+                    ctx.font = "14px Monogram";
+                    const dots = ".".repeat(loadingTick);
+                    ctx.fillText(`Cargando minijuego${dots}`, canvas.width / 2, canvas.height / 2 + 16);
+                    ;
 
                     return; // no dibujamos nada más
+
                 }
 
 
@@ -406,7 +412,7 @@
 
                 // Suelo
                 // ctx.fillStyle = "#d1d5db";
-                ctx.fillRect(0, sueloY + 8, canvas.width, 2);
+                //ctx.fillRect(0, sueloY + 8, canvas.width, 2);
 
                 // Jugador
                 let currentImg = null;
@@ -449,6 +455,42 @@
                 ctx.textAlign = "left";
 
                 ctx.fillText(`Puntos: ${puntuacion}`, 8, 14);
+
+                // --- Pantalla de inicio (antes de la primera partida) ---
+                if (!state.enMarcha && !state.anim.muerto && state.mostrarPantallaInicio && assetsListos()) {
+
+                    // Fondo semitransparente
+                    ctx.fillStyle = "rgba(0,0,0,0.45)";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Panel central
+                    const panelWidth = 240;
+                    const panelHeight = 120;
+                    const panelX = (canvas.width - panelWidth) / 2;
+                    const panelY = (canvas.height - panelHeight) / 2;
+
+                    ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
+                    ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+
+                    ctx.strokeStyle = "#ffffff";
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+
+                    // Texto
+                    ctx.textAlign = "center";
+                    ctx.fillStyle = "#ffffff";
+
+                    ctx.font = "24px Monogram";
+                    ctx.fillText("QueueQuest", canvas.width / 2, panelY + 32);
+
+                    ctx.font = "16px Monogram";
+                    ctx.fillText("Minijuego - Salta la cola", canvas.width / 2, panelY + 52);
+
+                    ctx.font = "20px Monogram";
+                    ctx.fillText("Pulsa 'Iniciar' para empezar", canvas.width / 2, panelY + 78);
+
+                    return; // no dibujamos nada más por encima
+                }
 
                 if (state.anim.muerto) {
 
@@ -521,9 +563,21 @@
                 window.location.href = `index.html?cola=${encodeURIComponent(colaId)}`;
             });
 
-            // ---- Primer frame estático ----
-            resetJuego();
-            dibujar();
+            // Animación de la pantalla de carga (puntos ...)
+            setInterval(() => {
+                if (!assetsListos() && !state.enMarcha) {
+                    loadingTick = (loadingTick + 1) % 4; // 0,1,2,3
+                    dibujar();
+                }
+            }, 400);
+
+            // ---- Cargar fuente y luego dibujar la primera vez ----
+            document.fonts.load("20px Monogram").then(() => {
+                console.log("Fuente Monogram cargada.");
+                resetJuego();
+                dibujar();
+            });
+
         })();
     </script>
 
