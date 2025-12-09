@@ -217,7 +217,7 @@ class _TicketScreenState extends State<TicketScreen> {
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(24),
                                         onTap: () {
-                                          // TODO: Navigator.pushNamed(context, '/missions');
+                                          Navigator.pushNamed(context, '/missions');
                                         },
                                         child: Padding(
                                           padding: const EdgeInsets.all(16.0),
@@ -251,7 +251,7 @@ class _TicketScreenState extends State<TicketScreen> {
                                       child: InkWell(
                                         borderRadius: BorderRadius.circular(24),
                                         onTap: () {
-                                          // TODO: Navigator.pushNamed(context, '/offers');
+                                          Navigator.pushNamed(context, '/offers');
                                         },
                                         child: Padding(
                                           padding: const EdgeInsets.all(16.0),

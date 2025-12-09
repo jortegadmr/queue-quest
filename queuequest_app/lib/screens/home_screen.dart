@@ -6,7 +6,9 @@ class HomeScreen extends StatelessWidget {
 
   Future<void> _openComercioPanel() async {
     // Sustituye por la URL real de tu panel comercio
-    final uri = Uri.parse('https://TU-DOMINIO/panel-comercio.html');
+    final uri = Uri.parse(
+      'https://TU-DOMINIO/panel-comercio.html',
+    ); // TODO: cambiar URL
     await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
@@ -97,24 +99,32 @@ class HomeScreen extends StatelessWidget {
                         SizedBox(
                           height: 52,
                           child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 16),
-                            ).copyWith(
-                              backgroundColor: WidgetStateProperty.resolveWith(
-                                (_) => null, // dejamos que el tema mande
-                              ),
-                            ),
-                            onPressed: () =>
-                                Navigator.pushNamed(context, '/scan'),
+                            style:
+                                ElevatedButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
+                                ).copyWith(
+                                  backgroundColor:
+                                      WidgetStateProperty.resolveWith(
+                                        (_) =>
+                                            null, // dejamos que el tema mande
+                                      ),
+                                ),
+                            onPressed: () {
+                              // Simulación de QR: vamos directamente a la cola "cafeteria-aurora"
+                              Navigator.pushNamed(
+                                context,
+                                '/commerce',
+                                arguments: 'cafeteria-aurora',
+                              );
+                            },
                             child: const Text(
                               'Escanear QR y pedir número',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.w600),
                             ),
                           ),
                         ),
