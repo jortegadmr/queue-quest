@@ -134,6 +134,34 @@
                     </button>
                 </div>
 
+                <!-- VISTA 4: misiones QueueQuest -->
+                <div class="view" id="view-misiones">
+                    <div>
+                        <div class="label-small">QueueQuest</div>
+                        <p class="hint">
+                            Misiones rápidas para hacer la espera más entretenida. Tu progreso solo se guarda durante
+                            este turno.
+                        </p>
+                    </div>
+
+                    <div id="resumenMisiones" style="margin-top: 8px; font-size: 13px;">
+                        <!-- Se rellenará desde JS con puntos totales -->
+                    </div>
+
+                    <div class="progress-wrapper">
+                        <div class="progress-bar" id="barraProgresoMisiones"></div>
+                    </div>
+
+                    <div id="listaMisiones" style="margin-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+                        <!-- Se rellena desde JavaScript -->
+                    </div>
+
+                    <button class="btn btn-secondary btn-full" id="btnVolverDesdeMisiones" style="margin-top: 12px;">
+                        <span class="icon">⬅️</span>
+                        <span>Volver a tu turno</span>
+                    </button>
+                </div>
+
 
             </div>
         </main>
@@ -214,6 +242,13 @@
         const btnVolverDesdeOfertas = document.getElementById("btnVolverDesdeOfertas");
         const nombreLocalEl = document.getElementById("nombreLocal");
         const descripcionLocalEl = document.getElementById("descripcionLocal");
+        const viewMisiones = document.getElementById("view-misiones");
+        const listaMisionesEl = document.getElementById("listaMisiones");
+        const resumenMisionesEl = document.getElementById("resumenMisiones");
+        const btnVolverDesdeMisiones = document.getElementById("btnVolverDesdeMisiones");
+        const barraProgresoMisiones = document.getElementById("barraProgresoMisiones");
+
+
 
 
         // --- Cargar datos estáticos del comercio (nombre, descripción, tiempo medio) ---
@@ -252,20 +287,63 @@
             personasDelanteEl.textContent = personasDelante;
             tiempoEstimadoEl.textContent = `${eta} min`;
 
+            mostrarSoloVista(viewTurno);
+        }
+
+        function mostrarSoloVista(vista) {
             viewInicio.classList.remove("active");
-            viewTurno.classList.add("active");
+            viewTurno.classList.remove("active");
+            viewOfertas.classList.remove("active");
+            viewMisiones.classList.remove("active");
+
+            vista.classList.add("active");
         }
 
         function mostrarVistaOfertas() {
-            viewInicio.classList.remove("active");
-            viewTurno.classList.remove("active");
-            viewOfertas.classList.add("active");
+            mostrarSoloVista(viewOfertas);
         }
 
         function volverDesdeOfertas() {
-            viewOfertas.classList.remove("active");
-            // volvemos a la vista de turno porque solo tiene sentido entrar a ofertas si ya hay turno
-            viewTurno.classList.add("active");
+            // volvemos siempre a la vista de turno
+            mostrarSoloVista(viewTurno);
+        }
+
+        function mostrarVistaMisiones() {
+            mostrarSoloVista(viewMisiones);
+        }
+
+        function volverDesdeMisiones() {
+            mostrarSoloVista(viewTurno);
+        }
+
+
+        // --- Gestión de misiones QueueQuest (localStorage) ---
+
+        function claveMisionesLocal() {
+            const colaId = localStorage.getItem("colaId");
+            const ticketId = localStorage.getItem("ticketId");
+            if (!colaId || !ticketId) return null;
+            return `misiones_${colaId}_${ticketId}`;
+        }
+
+        function cargarMisionesCompletadasLocal() {
+            const key = claveMisionesLocal();
+            if (!key) return new Set();
+            try {
+                const raw = localStorage.getItem(key);
+                if (!raw) return new Set();
+                const arr = JSON.parse(raw);
+                return new Set(arr);
+            } catch {
+                return new Set();
+            }
+        }
+
+        function guardarMisionesCompletadasLocal(setIds) {
+            const key = claveMisionesLocal();
+            if (!key) return;
+            const arr = Array.from(setIds);
+            localStorage.setItem(key, JSON.stringify(arr));
         }
 
 
@@ -486,6 +564,150 @@
             }
         }
 
+        // --- Cargar misiones QueueQuest ----
+
+        async function cargarMisiones() {
+            try {
+                const colaRef = doc(db, "colas", COLA_ID);
+                const misionesRef = collection(colaRef, "misiones");
+                const snapshot = await getDocs(misionesRef);
+
+                let misiones = [];
+                snapshot.forEach((docSnap) => {
+                    const m = docSnap.data();
+                    if (m.activa !== false) {
+                        misiones.push({ id: docSnap.id, ...m });
+                    }
+                });
+
+                misiones.sort((a, b) => {
+                    const ordA = a.orden ?? 999;
+                    const ordB = b.orden ?? 999;
+                    if (ordA !== ordB) return ordA - ordB;
+                    return (a.titulo || "").localeCompare(b.titulo || "");
+                });
+
+                const completadas = cargarMisionesCompletadasLocal();
+
+                listaMisionesEl.innerHTML = "";
+
+                if (misiones.length === 0) {
+                    resumenMisionesEl.textContent = "";
+                    const vacio = document.createElement("p");
+                    vacio.className = "hint";
+                    vacio.textContent = "Este comercio aún no tiene misiones configuradas.";
+                    listaMisionesEl.appendChild(vacio);
+                    return;
+                }
+
+                let puntosTotales = 0;
+                let puntosCompletados = 0;
+
+                misiones.forEach((mision) => {
+                    const puntos = typeof mision.puntos === "number" ? mision.puntos : 0;
+                    puntosTotales += puntos;
+
+                    const card = document.createElement("div");
+                    card.style.padding = "10px 12px";
+                    card.style.borderRadius = "16px";
+                    card.style.border = "1px solid #e5e7eb";
+                    card.style.background = "#f9fafb";
+                    card.style.display = "flex";
+                    card.style.flexDirection = "column";
+                    card.style.gap = "4px";
+
+                    const filaSuperior = document.createElement("div");
+                    filaSuperior.style.display = "flex";
+                    filaSuperior.style.justifyContent = "space-between";
+                    filaSuperior.style.alignItems = "center";
+                    filaSuperior.style.gap = "8px";
+
+                    const titulo = document.createElement("div");
+                    titulo.style.fontSize = "14px";
+                    titulo.style.fontWeight = "600";
+                    titulo.textContent = mision.titulo || "Misión";
+
+                    const puntosEl = document.createElement("div");
+                    puntosEl.style.fontSize = "12px";
+                    puntosEl.style.color = "#4b5563";
+                    if (puntos > 0) {
+                        puntosEl.textContent = `${puntos} pts`;
+                    }
+
+                    filaSuperior.appendChild(titulo);
+                    filaSuperior.appendChild(puntosEl);
+
+                    const desc = document.createElement("div");
+                    desc.style.fontSize = "12px";
+                    desc.style.color = "#6b7280";
+                    desc.textContent = mision.descripcion || "";
+
+                    const boton = document.createElement("button");
+                    boton.className = "btn btn-secondary";
+                    boton.style.marginTop = "6px";
+                    boton.style.padding = "8px 10px";
+                    boton.style.fontSize = "13px";
+
+                    const yaCompletada = completadas.has(mision.id);
+                    if (yaCompletada) {
+                        boton.textContent = "Completada";
+                        boton.style.opacity = "0.85";
+                        boton.style.background = "#dcfce7";
+                    } else {
+                        boton.textContent = "Marcar como completada";
+                    }
+
+                    boton.addEventListener("click", () => {
+                        const set = cargarMisionesCompletadasLocal();
+                        if (set.has(mision.id)) {
+                            set.delete(mision.id);
+                        } else {
+                            set.add(mision.id);
+                        }
+                        guardarMisionesCompletadasLocal(set);
+                        // Recargamos la vista para actualizar estilos y resumen
+                        cargarMisiones();
+                    });
+
+                    if (yaCompletada) {
+                        puntosCompletados += puntos;
+                    }
+
+                    card.appendChild(filaSuperior);
+                    card.appendChild(desc);
+                    card.appendChild(boton);
+
+                    listaMisionesEl.appendChild(card);
+                });
+
+                let porcentaje = 0;
+
+                if (puntosTotales > 0) {
+                    porcentaje = Math.round((puntosCompletados / puntosTotales) * 100);
+                    resumenMisionesEl.textContent =
+                        `Progreso: ${puntosCompletados} / ${puntosTotales} puntos (${porcentaje}%) en esta espera.`;
+                } else {
+                    resumenMisionesEl.textContent = "";
+                }
+
+                // Actualizar barra de progreso
+                if (barraProgresoMisiones) {
+                    barraProgresoMisiones.style.width = `${porcentaje}%`;
+                }
+
+            } catch (err) {
+                console.error("Error al cargar misiones:", err);
+                listaMisionesEl.innerHTML = "";
+                resumenMisionesEl.textContent = "";
+                const p = document.createElement("p");
+                p.className = "hint";
+                p.style.color = "#b91c1c";
+                p.textContent = "No se han podido cargar las misiones en este momento.";
+                listaMisionesEl.appendChild(p);
+            }
+        }
+
+
 
 
         // --- Eventos ---
@@ -495,8 +717,9 @@
             window.location.href = "login.html";
         });
 
-        btnQueueQuest.addEventListener("click", () => {
-            alert("Zona gamificada (QueueQuest) – se implementará en fases posteriores.");
+        btnQueueQuest.addEventListener("click", async () => {
+            await cargarMisiones();
+            mostrarVistaMisiones();
         });
 
         btnOfertas.addEventListener("click", async () => {
@@ -506,6 +729,10 @@
 
         btnVolverDesdeOfertas.addEventListener("click", () => {
             volverDesdeOfertas();
+        });
+
+        btnVolverDesdeMisiones.addEventListener("click", () => {
+            volverDesdeMisiones();
         });
 
         // Cargar nombre, descripción y tiempo medio del comercio
