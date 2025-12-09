@@ -230,28 +230,35 @@ header {
    font-weight: 600;
  }
 
- .alert {
-   margin-top: 8px;
-   padding: 10px 12px;
-   border-radius: 20px;
-   background: #fef2f2;
-   border: 1px solid #fee2e2;
-   color: #b91c1c;
-   font-size: 12px;
-   display: flex;
-   align-items: flex-start;
-   gap: 8px;
- }
+.alert {
+  display: flex;
+  align-items: center;        /* 🔥 Alinea icono + texto verticalmente */
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #fff9e8;
+  border: 1px solid #f6c76d;
+  color: #9a5a00;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+/* alineación fina del icono FA */
+.alert .icon {
+  font-size: 18px;
+  color: #d97706;
+
+  /* 🔥 Ajuste óptico exacto: mueve el icono ligeramente arriba */
+  position: relative;
+  top: -1px;
+}
+
 
 .icon {
   font-size: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-
-.alert .icon {
-  font-size: 16px;
 }
 
 .btn .icon {
