@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QueueQuest · Panel del comercio</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
@@ -51,14 +52,14 @@
               Aún no se ha llamado ningún turno.
             </div>
           </div>
-
+          heighheight
           <div class="current-controls">
             <button class="btn btn-primary btn-full" id="btnLlamarSiguiente">
-              <span class="icon">📣</span>
+              <i class="fa-solid fa-bullhorn icon" aria-hidden="true"></i>
               <span id="textoLlamarSiguiente">Llamar siguiente</span>
             </button>
             <button class="btn btn-secondary btn-full" id="btnPausarCola">
-              <span class="icon">⏸️</span>
+              <i class="fa-solid fa-pause icon" aria-hidden="true"></i>
               <span>Pausar cola</span>
             </button>
           </div>
@@ -229,10 +230,12 @@
         // Texto e icono del botón pausar/reanudar
         if (abierta) {
           btnPausarColaText.textContent = "Pausar cola";
-          btnPausarColaIcon.textContent = "⏸️";
+          btnPausarColaIcon.classList.remove("fa-play");
+          btnPausarColaIcon.classList.add("fa-pause");
         } else {
           btnPausarColaText.textContent = "Reanudar cola";
-          btnPausarColaIcon.textContent = "▶️";
+          btnPausarColaIcon.classList.remove("fa-pause");
+          btnPausarColaIcon.classList.add("fa-play");
         }
 
         // Turno actual

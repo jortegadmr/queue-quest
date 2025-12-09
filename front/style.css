@@ -36,30 +36,18 @@
    gap: 12px;
  }
 
- header {
-   display: flex;
-   align-items: center;
-   gap: 10px;
-   padding: 10px 12px;
-   border-radius: 20px;
-   background: rgba(255, 255, 255, 0.8);
-   backdrop-filter: blur(12px);
-   border: 1px solid rgba(209, 213, 219, 0.6);
-   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
- }
-
- .logo {
-   width: 32px;
-   height: 32px;
-   border-radius: 999px;
-   background: conic-gradient(from 180deg, #2563eb, #22c55e, #0ea5e9, #2563eb);
-   display: flex;
-   align-items: center;
-   justify-content: center;
-   color: white;
-   font-weight: 700;
-   font-size: 18px;
- }
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(209, 213, 219, 0.6);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  position: relative;          /* ← para el botón logout */
+}
 
 .logo-app img {
   width: 48px;
@@ -154,23 +142,13 @@
    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.4);
  }
 
- .btn-primary span.icon {
-   font-size: 18px;
- }
-
- .btn-secondary {
-   background: rgba(255, 255, 255, 0.95);
-   color: var(--text-main);
-   border: 1px solid var(--border-soft);
-   font-size: 15px;
-   padding: 14px 16px;
-   align-self: stretch;
-   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
- }
-
- .btn-secondary span.icon {
-   font-size: 16px;
- }
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-main);
+  border: 1px solid var(--border-soft);
+  align-self: stretch;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
 
  .btn-primary:hover {
    filter: brightness(1.05);
@@ -265,10 +243,21 @@
    gap: 8px;
  }
 
- .alert span.icon {
-   font-size: 14px;
-   margin-top: 1px;
- }
+.icon {
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alert .icon {
+  font-size: 16px;
+}
+
+.btn .icon {
+  margin-right: 6px;
+}
+
 
  .subcard {
    margin-top: 12px;
@@ -359,11 +348,6 @@
   font-size: 13px;
   color: var(--text-muted);
   margin-top: 4px;
-}
-
-.pill-commerce {
-  background: rgba(16, 185, 129, 0.1);
-  color: #047857;
 }
 
 .pill-commerce {
@@ -546,22 +530,28 @@
   right: 16px;
   padding: 8px 14px;
   font-size: 0.9rem;
-  background-color: #e74c3c; /* rojo suave tipo "danger" */
-  color: white;
+  background-color: var(--danger); /* usa tu token */
+  color: #ffffff;
   border: none;
-  border-radius: 8px;
+  border-radius: 999px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  box-shadow: 0 8px 18px rgba(248, 113, 113, 0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition:
+    background-color 0.15s ease,
+    transform 0.1s ease,
+    box-shadow 0.12s ease;
 }
 
 .btn-logout:hover {
-  background-color: #c0392b; /* rojo más oscuro al pasar el ratón */
+  background-color: #dc2626; /* un tono más oscuro del mismo rango */
 }
 
 .btn-logout:active {
-  background-color: #a93226;
+  background-color: #b91c1c;
+  transform: scale(0.97);
+  box-shadow: none;
 }
 
-header {
-  position: relative;
-}
