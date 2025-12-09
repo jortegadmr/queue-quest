@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'screens/home_screen.dart';
+import 'screens/qr_scan_screen.dart';
+import 'screens/commerce_landing_screen.dart';
+import 'screens/ticket_screen.dart';
 
 class QueueQuestApp extends StatelessWidget {
   const QueueQuestApp({super.key});
@@ -7,18 +11,27 @@ class QueueQuestApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'QueueQuest',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
         useMaterial3: true,
-      ),
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('QueueQuest'),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2563EB), // azul tipo prototipo
         ),
-        body: const Center(
-          child: Text('Hola desde QueueQuest App'),
+        scaffoldBackgroundColor: const Color(0xFFF4F6FB), // fondo gris-azulado suave
+        cardTheme: CardThemeData(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          elevation: 2,
         ),
       ),
+      initialRoute: '/',
+      routes: {
+        '/': (_) => const HomeScreen(),
+        '/scan': (_) => const QrScanScreen(),
+        '/commerce': (_) => const CommerceLandingScreen(),
+       // '/ticket': (_) => const TicketScreen(),
+      },
     );
   }
 }
