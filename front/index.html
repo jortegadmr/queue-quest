@@ -156,6 +156,21 @@
                         <!-- Se rellena desde JavaScript -->
                     </div>
 
+                    <!-- Mini-juego: Salta la cola -->
+
+                    <div class="subcard" style="margin-top: 16px;">
+                        <div class="subcard-title">Mini-juego: Salta la cola</div>
+                        <div class="subcard-text">
+                            Si quieres, puedes abrir un minijuego sencillo mientras esperas tu turno.
+                        </div>
+
+                        <button class="btn btn-secondary btn-full" id="btnAbrirJuego" style="margin-top: 10px;">
+                            <span class="icon">🎮</span>
+                            <span>Abrir minijuego</span>
+                        </button>
+                    </div>
+
+
                     <button class="btn btn-secondary btn-full" id="btnVolverDesdeMisiones" style="margin-top: 12px;">
                         <span class="icon">⬅️</span>
                         <span>Volver a tu turno</span>
@@ -247,8 +262,7 @@
         const resumenMisionesEl = document.getElementById("resumenMisiones");
         const btnVolverDesdeMisiones = document.getElementById("btnVolverDesdeMisiones");
         const barraProgresoMisiones = document.getElementById("barraProgresoMisiones");
-
-
+        const btnAbrirJuego = document.getElementById("btnAbrirJuego");
 
 
         // --- Cargar datos estáticos del comercio (nombre, descripción, tiempo medio) ---
@@ -725,6 +739,11 @@
         btnOfertas.addEventListener("click", async () => {
             await cargarOfertas();
             mostrarVistaOfertas();
+        });
+
+        btnAbrirJuego.addEventListener("click", () => {
+            // Pasamos también la cola por la URL, por si en el futuro quieres personalizar cosas
+            window.location.href = `juego.html?cola=${encodeURIComponent(COLA_ID)}`;
         });
 
         btnVolverDesdeOfertas.addEventListener("click", () => {

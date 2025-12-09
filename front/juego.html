@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>QueueQuest · Minijuego</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        @font-face {
+            font-family: "Monogram";
+            src: url("src/fonts/monogram.ttf") format("truetype");
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="app">
+        <header>
+            <div class="logo-app">
+                <img src="logo.png" alt="QueueQuest Logo" />
+            </div>
+            <div class="header-text">
+                <div class="header-title">QueueQuest</div>
+                <div class="header-subtitle">Minijuego · Salta la cola</div>
+            </div>
+        </header>
+
+        <main>
+            <div class="card">
+                <div>
+                    <div class="label-small">Mientras esperas…</div>
+                    <p class="hint">
+                        Juega a este minijuego sencillo tipo “runner”. Toca la pantalla o pulsa la barra
+                        espaciadora para saltar y esquivar los obstáculos.
+                    </p>
+                </div>
+
+                <canvas id="juegoRunner" width="320" height="250"
+                    style="width: 100%; margin-top: 10px; border-radius: 12px; border: 1px solid #e5e7eb; background: #f9fafb;">
+                </canvas>
+
+                <button class="btn btn-primary btn-full" id="btnIniciarJuego" style="margin-top: 12px;">
+                    <span class="icon">▶️</span>
+                    <span>Iniciar / reiniciar partida</span>
+                </button>
+
+                <p class="hint" id="estadoJuego" style="margin-top: 6px;">
+                    Pulsa “Iniciar” para empezar.
+                </p>
+
+                <button class="btn btn-secondary btn-full" id="btnVolver" style="margin-top: 14px;">
+                    <span class="icon">⬅️</span>
+                    <span>Volver a QueueQuest</span>
+                </button>
+            </div>
+        </main>
+
+        <footer>
+            Prototipo web – Minijuego · QueueQuest
+        </footer>
+    </div>
+
+    <script>
+        (() => {
+            // ---- Parámetros de la cola ----
+            const params = new URLSearchParams(window.location.search);
+            const colaId = params.get("cola") || "cafeteria-aurora";
+            console.log("Iniciando Minijuego para cola:", colaId);
+
+            // ---- Referencias al DOM ----
+            const canvas = document.getElementById("juegoRunner");
+            const ctx = canvas?.getContext("2d");
+            const btnIniciarJuego = document.getElementById("btnIniciarJuego");
+            const estadoJuegoEl = document.getElementById("estadoJuego");
+            const btnVolver = document.getElementById("btnVolver");
+
+            if (!canvas || !ctx || !btnIniciarJuego || !estadoJuegoEl || !btnVolver) {
+                console.error("Minijuego: faltan elementos en el DOM.");
+                return;
+            }
+
+            // ---- Sprites del jugador (frames sueltos) ----
+            const RUN_FRAME_COUNT = 6;
+            const runFrames = [];
+            for (let i = 0; i < RUN_FRAME_COUNT; i++) {
+                const img = new Image();
+                img.src = `src/player/character_run_${i}.png`;
+                runFrames.push(img);
+            }
+
+            // Frame de golpeado
+            const hurtImg = new Image();
+            hurtImg.src = "src/player/character_hurt_0.png";
+
+            // ---- Sprites del obstáculo (animación slime) ----
+
+            const SLIME_FRAME_COUNT = 4;
+            const slimeFrames = [];
+            for (let i = 0; i < SLIME_FRAME_COUNT; i++) {
+                const img = new Image();
+                img.src = `src/obstacles/slime_${i}.png`;
+                slimeFrames.push(img);
+            }
+
+            const slimeAnim = {
+                frame: 0,
+                time: 0
+            };
+
+            // ---- Fondos parallax ----
+            const bgLayers = [
+                {
+                    name: "Sky",
+                    img: new Image(),
+                    x: 0,
+                    speedFactor: 0.1
+                },
+                {
+                    name: "DownLayer",
+                    img: new Image(),
+                    x: 0,
+                    speedFactor: 0.3
+                },
+                {
+                    name: "MiddleLayer",
+                    img: new Image(),
+                    x: 0,
+                    speedFactor: 0.5
+                },
+                {
+                    name: "Light",
+                    img: new Image(),
+                    x: 0,
+                    speedFactor: 0.7
+                },
+                {
+                    name: "TopLayer",
+                    img: new Image(),
+                    x: 0,
+                    speedFactor: 0.9
+                }
+            ];
+
+            // Asignar rutas
+            bgLayers.find(l => l.name === "Sky").img.src = "src/background/Sky.png";
+            bgLayers.find(l => l.name === "DownLayer").img.src = "src/background/DownLayer.png";
+            bgLayers.find(l => l.name === "MiddleLayer").img.src = "src/background/MiddleLayer.png";
+            bgLayers.find(l => l.name === "Light").img.src = "src/background/Light.png";
+            bgLayers.find(l => l.name === "TopLayer").img.src = "src/background/TopLayer.png";
+
+            // Después de crear runFrames, hurtImg, slimeFrames y bgLayers (si tienes parallax)
+            const todasLasImagenes = [
+                hurtImg,
+                ...runFrames,
+                ...slimeFrames,
+                ...bgLayers.map(l => l.img),
+            ];
+
+            function assetsListos() {
+                return todasLasImagenes.every(
+                    img => img.complete && img.naturalWidth > 0
+                );
+            }
+
+
+            // ---- Constantes del juego ----
+            const GRAVEDAD = 0.30;
+            const VELOCIDAD_INICIAL = 2.2;
+            const INCREMENTO_VELOCIDAD = 0.15;
+            const PUNTOS_POR_OBSTACULO = 10;
+            const OFFSET_SUELO = 22; // separación desde el borde inferior
+            const SPRITE_FRAME_TIME = 80;   // jugador
+            const SLIME_FRAME_TIME = 120;   // obstáculo
+
+            // ---- Estado del juego ----
+            const state = {
+                enMarcha: false,
+                ultimaMarcaTiempo: 0,
+                puntuacion: 0,
+                velocidad: VELOCIDAD_INICIAL,
+                sueloY: canvas.height - OFFSET_SUELO,
+                jugador: {
+                    x: 30,
+                    y: 0, // se ajusta en reset
+                    width: 32,
+                    height: 32,
+                    velY: 0,
+                    saltando: false
+                },
+                obstaculo: {
+                    x: 0, // se ajusta en reset
+                    y: 0,
+                    width: 32,
+                    height: 32
+                },
+                anim: {
+                    frame: 0,
+                    time: 0,
+                    muerto: false
+                }
+            };
+
+            let loopId = null;
+
+            function getHitboxJugador(jugador) {
+                // Hitbox más pequeña, solo la parte baja del cuerpo
+                const boxWidth = 18;
+                const boxHeight = 18;
+
+                return {
+                    x: jugador.x + (jugador.width - boxWidth) / 2,
+                    y: jugador.y + (jugador.height - boxHeight), // parte baja
+                    width: boxWidth,
+                    height: boxHeight
+                };
+            }
+
+            function getHitboxObstaculo(obstaculo) {
+                // Hitbox centrada y más baja para el slime
+                const boxWidth = 18;
+                const boxHeight = 16;
+
+                return {
+                    x: obstaculo.x + (obstaculo.width - boxWidth) / 2,
+                    y: obstaculo.y + (obstaculo.height - boxHeight), // parte baja
+                    width: boxWidth,
+                    height: boxHeight
+                };
+            }
+
+            function hayColision(a, b) {
+                return (
+                    a.x < b.x + b.width &&
+                    a.x + a.width > b.x &&
+                    a.y < b.y + b.height &&
+                    a.y + a.height > b.y
+                );
+            }
+
+
+
+            // ---- Inicialización / reinicio ----
+            function resetJuego() {
+                state.sueloY = canvas.height - OFFSET_SUELO;
+
+                // Jugador: apoyado en el suelo
+                state.jugador.y = state.sueloY - state.jugador.height;
+                state.jugador.velY = 0;
+                state.jugador.saltando = false;
+
+                // Obstáculo: fuera de pantalla, a la derecha
+                state.obstaculo.x = canvas.width + 40;
+                state.obstaculo.y = state.sueloY - state.obstaculo.height;
+
+                state.puntuacion = 0;
+                state.velocidad = VELOCIDAD_INICIAL;
+
+                state.anim.frame = 0;
+                state.anim.time = 0;
+                state.anim.muerto = false;
+
+                slimeAnim.frame = 0;
+                slimeAnim.time = 0;
+
+                estadoJuegoEl.textContent =
+                    "Toca el lienzo o pulsa la barra espaciadora para saltar.";
+            }
+
+            function iniciarJuego() {
+                resetJuego();
+                state.enMarcha = true;
+                state.ultimaMarcaTiempo = performance.now();
+
+                if (loopId !== null) {
+                    cancelAnimationFrame(loopId);
+                }
+                loopId = requestAnimationFrame(bucleJuego);
+
+                estadoJuegoEl.textContent =
+                    "Juego en marcha. Toca la pantalla o pulsa la barra espaciadora para saltar.";
+            }
+
+            // ---- Lógica principal ----
+            function saltar() {
+                if (!state.enMarcha) return;
+                const jugador = state.jugador;
+                if (!jugador.saltando) {
+                    jugador.velY = -6.8;
+                    jugador.saltando = true;
+                }
+            }
+
+            function actualizar(dt, deltaMs) {
+                const jugador = state.jugador;
+                const obstaculo = state.obstaculo;
+
+                // Gravedad y movimiento vertical
+                jugador.velY += GRAVEDAD * dt;
+                jugador.y += jugador.velY * dt;
+
+                const limiteSuelo = state.sueloY - jugador.height;
+                if (jugador.y > limiteSuelo) {
+                    jugador.y = limiteSuelo;
+                    jugador.velY = 0;
+                    jugador.saltando = false;
+                }
+
+                // Movimiento horizontal del obstáculo
+                obstaculo.x -= state.velocidad * dt;
+
+                // Cuando sale de pantalla, lo reposicionamos y subimos dificultad
+                if (obstaculo.x + obstaculo.width < 0) {
+                    obstaculo.x = canvas.width + 40 + Math.random() * 60;
+                    state.velocidad += INCREMENTO_VELOCIDAD;
+                    state.puntuacion += PUNTOS_POR_OBSTACULO;
+                }
+
+                // Parallax: mover capas de fondo
+                bgLayers.forEach(layer => {
+                    layer.x -= state.velocidad * layer.speedFactor * dt;
+
+                    // cuando una copia sale de pantalla a la izquierda, la recolocamos
+                    if (layer.x <= -canvas.width) {
+                        layer.x += canvas.width;
+                    }
+                });
+
+                // Animación del jugador (solo si está vivo)
+                if (!state.anim.muerto) {
+                    state.anim.time += deltaMs;
+                    if (state.anim.time >= SPRITE_FRAME_TIME) {
+                        state.anim.time = 0;
+                        state.anim.frame = (state.anim.frame + 1) % RUN_FRAME_COUNT;
+                    }
+                }
+
+                // Animación del slime
+                slimeAnim.time += deltaMs;
+                if (slimeAnim.time >= SLIME_FRAME_TIME) {
+                    slimeAnim.time = 0;
+                    slimeAnim.frame = (slimeAnim.frame + 1) % SLIME_FRAME_COUNT;
+                }
+
+                const hbJugador = getHitboxJugador(jugador);
+                const hbObstaculo = getHitboxObstaculo(obstaculo);
+
+                const colision = hayColision(hbJugador, hbObstaculo);
+
+                if (colision) {
+                    state.enMarcha = false;
+                    state.anim.muerto = true;
+                    estadoJuegoEl.textContent =
+                        `Has chocado. Puntuación: ${state.puntuacion} puntos. Pulsa "Iniciar" para jugar de nuevo.`;
+                }
+            }
+
+            function dibujar() {
+                const { sueloY, jugador, obstaculo, puntuacion, anim } = state;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // --- Pantalla de carga mientras no están las imágenes ---
+                if (!assetsListos()) {
+                    ctx.fillStyle = "#020617"; // fondo oscuro
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    ctx.font = "22px Monogram";
+                    ctx.fillStyle = "#e5e7eb";
+                    ctx.textAlign = "center";
+                    ctx.fillText("QueueQuest", canvas.width / 2, canvas.height / 2 - 10);
+
+                    ctx.font = "14px Monogram";
+                    ctx.fillText("Pulse para jugar", canvas.width / 2, canvas.height / 2 + 16);
+
+                    return; // no dibujamos nada más
+                }
+
+
+                // --- Fondo parallax (de atrás hacia delante) ---
+                bgLayers.forEach(layer => {
+                    const img = layer.img;
+                    if (img.complete && img.naturalWidth > 0) {
+                        const x = layer.x;
+
+                        // primera copia
+                        ctx.drawImage(
+                            img,
+                            x,
+                            0,
+                            canvas.width,
+                            canvas.height
+                        );
+
+                        // segunda copia para cerrar el bucle infinito
+                        ctx.drawImage(
+                            img,
+                            x + canvas.width,
+                            0,
+                            canvas.width,
+                            canvas.height
+                        );
+                    }
+                });
+
+                // Suelo
+                // ctx.fillStyle = "#d1d5db";
+                ctx.fillRect(0, sueloY + 8, canvas.width, 2);
+
+                // Jugador
+                let currentImg = null;
+                if (anim.muerto) {
+                    currentImg = hurtImg;
+                } else if (runFrames.length > 0) {
+                    currentImg = runFrames[anim.frame % RUN_FRAME_COUNT];
+                }
+
+                if (currentImg && currentImg.complete && currentImg.naturalWidth > 0) {
+                    ctx.drawImage(
+                        currentImg,
+                        jugador.x,
+                        jugador.y,
+                        jugador.width,
+                        jugador.height
+                    );
+                } else {
+                    console.log("No se han cargado los sprites del jugador.");
+                }
+
+                // Obstáculo: slime animado
+                const slimeImg = slimeFrames[slimeAnim.frame];
+                if (slimeImg && slimeImg.complete && slimeImg.naturalWidth > 0) {
+                    ctx.drawImage(
+                        slimeImg,
+                        obstaculo.x,
+                        obstaculo.y,
+                        obstaculo.width,
+                        obstaculo.height
+                    );
+                } else {
+                    ctx.fillStyle = "#ef4444";
+                    ctx.fillRect(obstaculo.x, obstaculo.y, obstaculo.width, obstaculo.height);
+                }
+
+                // Puntuación
+                ctx.font = "20px Monogram";
+                ctx.fillStyle = "#FFF";
+                ctx.textAlign = "left";
+
+                ctx.fillText(`Puntos: ${puntuacion}`, 8, 14);
+
+                if (state.anim.muerto) {
+
+                    // Fondo semitransparente
+                    ctx.fillStyle = "rgba(0,0,0,0.5)";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Panel central
+                    const panelWidth = 200;
+                    const panelHeight = 110;
+                    const panelX = (canvas.width - panelWidth) / 2;
+                    const panelY = (canvas.height - panelHeight) / 2;
+
+                    ctx.fillStyle = "rgba(20, 20, 20, 0.85)";
+                    ctx.fillRect(panelX, panelY, panelWidth, panelHeight);
+
+                    // Borde pixelado
+                    ctx.strokeStyle = "#ffffff";
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(panelX, panelY, panelWidth, panelHeight);
+
+                    // Texto Game Over
+                    ctx.font = "24px Monogram";
+                    ctx.fillStyle = "#ffffff";
+                    ctx.textAlign = "center";
+                    ctx.fillText("GAME OVER", canvas.width / 2, panelY + 40);
+
+                    // Puntuación
+                    ctx.font = "16px Monogram";
+                    ctx.fillText(`Puntos: ${state.puntuacion}`, canvas.width / 2, panelY + 70);
+                }
+
+            }
+
+            function bucleJuego(timestamp) {
+                if (!state.enMarcha && loopId === null) {
+                    return;
+                }
+
+                const deltaMs = timestamp - state.ultimaMarcaTiempo;
+                const dt = deltaMs / 16.67; // ~60 FPS
+                state.ultimaMarcaTiempo = timestamp;
+
+                if (state.enMarcha) {
+                    actualizar(dt, deltaMs);
+                }
+
+                dibujar();
+
+                if (state.enMarcha) {
+                    loopId = requestAnimationFrame(bucleJuego);
+                } else {
+                    loopId = null;
+                }
+            }
+
+            // ---- Eventos ----
+            btnIniciarJuego.addEventListener("click", iniciarJuego);
+
+            canvas.addEventListener("click", saltar);
+
+            window.addEventListener("keydown", (e) => {
+                if (e.code === "Space") {
+                    e.preventDefault();
+                    saltar();
+                }
+            });
+
+            btnVolver.addEventListener("click", () => {
+                window.location.href = `index.html?cola=${encodeURIComponent(colaId)}`;
+            });
+
+            // ---- Primer frame estático ----
+            resetJuego();
+            dibujar();
+        })();
+    </script>
+
+
+</body>
+
+</html>
