@@ -3,6 +3,8 @@ import 'screens/home_screen.dart';
 import 'screens/qr_scan_screen.dart';
 import 'screens/commerce_landing_screen.dart';
 import 'screens/ticket_screen.dart';
+import 'screens/offers_screen.dart';
+import 'screens/missions_screen.dart';
 
 class QueueQuestApp extends StatelessWidget {
   const QueueQuestApp({super.key});
@@ -27,10 +29,12 @@ class QueueQuestApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
-        '/': (_) => const HomeScreen(),
-        '/scan': (_) => const QrScanScreen(),
-        '/commerce': (_) => const CommerceLandingScreen(),
-       // '/ticket': (_) => const TicketScreen(),
+      '/': (_) => const HomeScreen(),
+      '/scan': (_) => const QrScanScreen(),
+      '/commerce': (_) => const CommerceLandingScreen(),
+      '/ticket': (_) => const TicketScreen(),
+      '/offers': (_) => const OffersScreen(),
+      '/missions': (_) => const MissionsScreen(),
       },
     );
   }
