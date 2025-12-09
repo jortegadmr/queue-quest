@@ -5,11 +5,8 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   Future<void> _openComercioPanel() async {
-    // Sustituye por la URL real de tu panel comercio
-    final uri = Uri.parse(
-      'https://TU-DOMINIO/panel-comercio.html',
-    ); // TODO: cambiar URL
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
+    final uri = Uri.parse('https://queuequest-a1303.web.app/comercio.html');
+  await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   @override
