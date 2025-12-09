@@ -539,3 +539,29 @@
     grid-template-columns: 1fr 1.6fr 1.2fr;
   }
 }
+
+.btn-logout {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  background-color: #e74c3c; /* rojo suave tipo "danger" */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.btn-logout:hover {
+  background-color: #c0392b; /* rojo más oscuro al pasar el ratón */
+}
+
+.btn-logout:active {
+  background-color: #a93226;
+}
+
+header {
+  position: relative;
+}

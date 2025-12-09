@@ -18,6 +18,10 @@
         <div class="header-title" id="nombreLocalPanel">Cafetería Aurora</div>
         <div class="header-subtitle">Panel de cola · QueueQuest</div>
       </div>
+      <button id="btnLogout" class="btn btn-secondary btn-logout">
+        Cerrar sesión
+      </button>
+
     </header>
 
     <main>
@@ -402,6 +406,18 @@
       }
 
       cargarPanel();
+    });
+
+    const btnLogout = document.getElementById("btnLogout");
+
+    btnLogout.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        window.location.href = "index.html";   // vuelve a login
+      } catch (err) {
+        console.error("Error al cerrar sesión:", err);
+        alert("No se ha podido cerrar sesión.");
+      }
     });
 
 
