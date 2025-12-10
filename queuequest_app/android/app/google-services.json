@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "917209444646",
+    "project_id": "queuequest-a1303",
+    "storage_bucket": "queuequest-a1303.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:917209444646:android:b45fbefeb972a1931211e7",
+        "android_client_info": {
+          "package_name": "com.example.queuequest_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCy8K_J0EfZs56ac249btBk1harkpvsTWc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
