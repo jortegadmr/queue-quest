@@ -19,6 +19,7 @@
       - RRSS: https://x.com/vmenezio
   
 [ESP] Especial agradecimiento por los assets a:
+
     - Warren Clark -> 
       - web: https://itch.io/profile/lionheart963 
       - RRSS: https://x.com/WoostarsPixels
