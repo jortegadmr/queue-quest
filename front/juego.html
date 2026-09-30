@@ -87,13 +87,13 @@
             const runFrames = [];
             for (let i = 0; i < RUN_FRAME_COUNT; i++) {
                 const img = new Image();
-                img.src = `src/player/character_run_${i}.png`;
+                img.src = `src/player/character-run-${i}.png`;
                 runFrames.push(img);
             }
 
             // Frame de golpeado
             const hurtImg = new Image();
-            hurtImg.src = "src/player/character_hurt_0.png";
+            hurtImg.src = "src/player/character-hurt-0.png";
 
             // ---- Sprites del obstáculo (animación slime) ----
 
@@ -101,7 +101,7 @@
             const slimeFrames = [];
             for (let i = 0; i < SLIME_FRAME_COUNT; i++) {
                 const img = new Image();
-                img.src = `src/obstacles/slime_${i}.png`;
+                img.src = `src/obstacles/slime-${i}.png`;
                 slimeFrames.push(img);
             }
 
@@ -145,11 +145,11 @@
             ];
 
             // Asignar rutas
-            bgLayers.find(l => l.name === "Sky").img.src = "src/background/Sky.png";
-            bgLayers.find(l => l.name === "DownLayer").img.src = "src/background/DownLayer.png";
-            bgLayers.find(l => l.name === "MiddleLayer").img.src = "src/background/MiddleLayer.png";
-            bgLayers.find(l => l.name === "Light").img.src = "src/background/Light.png";
-            bgLayers.find(l => l.name === "TopLayer").img.src = "src/background/TopLayer.png";
+            bgLayers.find(l => l.name === "Sky").img.src = "src/background/sky.png";
+            bgLayers.find(l => l.name === "DownLayer").img.src = "src/background/down-layer.png";
+            bgLayers.find(l => l.name === "MiddleLayer").img.src = "src/background/middle-layer.png";
+            bgLayers.find(l => l.name === "Light").img.src = "src/background/light.png";
+            bgLayers.find(l => l.name === "TopLayer").img.src = "src/background/top-layer.png";
 
             // Después de crear runFrames, hurtImg, slimeFrames y bgLayers (si tienes parallax)
             const todasLasImagenes = [
